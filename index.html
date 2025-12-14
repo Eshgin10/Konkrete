@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Konkrete</title>
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Precision Goal Tracking & AI Coaching" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Geist Font -->
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              background: '#000000',
+              surface: '#1C1C1E',
+              surfaceHighlight: '#2C2C2E',
+              primary: '#007AFF', // iOS System Blue
+              success: '#34C759', // iOS System Green
+              warning: '#FF9F0A', // iOS System Orange
+              danger: '#FF453A', // iOS System Red
+              textPrimary: '#FFFFFF',
+              textSecondary: '#8E8E93', // iOS System Gray
+              divider: 'rgba(84, 84, 88, 0.65)', // iOS Separator
+            },
+            fontFamily: {
+              // Body text uses Inter
+              sans: [
+                'Inter',
+                '-apple-system', 
+                'BlinkMacSystemFont', 
+                'sans-serif'
+              ],
+              // Headlines use Geist Sans
+              heading: [
+                'Geist Sans',
+                'Inter',
+                'sans-serif'
+              ],
+              mono: [
+                'ui-monospace', 
+                'SFMono-Regular', 
+                'Menlo', 
+                'Monaco', 
+                'Consolas', 
+                'monospace'
+              ],
+            },
+            spacing: {
+              '18': '4.5rem', // 72px
+              '22': '5.5rem', // 88px
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)',
+              'slide-up': 'slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'scale-press': 'scalePress 0.15s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(16px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              scalePress: {
+                '0%': { transform: 'scale(1)' },
+                '100%': { transform: 'scale(0.96)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+
+    <style>
+      body {
+        background-color: #000000;
+        color: #FFFFFF;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overscroll-behavior-y: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* Hide Scrollbar */
+      ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+      }
+      /* iOS Glassmorphism */
+      .glass-panel {
+        background: rgba(28, 28, 30, 0.85);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+      }
+      .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 24px);
+      }
+      .safe-area-top {
+        padding-top: env(safe-area-inset-top, 24px);
+      }
+      
+      /* Smooth transitions for inputs */
+      input, button {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "recharts": "https://esm.sh/recharts@^3.5.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
