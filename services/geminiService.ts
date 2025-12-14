@@ -4,7 +4,15 @@ import { TOPIC_ICONS } from "../constants";
 
 // Initialize AI Client
 // Note: process.env.API_KEY is expected to be available in the build environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+let ai: GoogleGenAI | null = null;
+
+const getAiClient = (): GoogleGenAI | null => {
+  if (!process.env.API_KEY) return null;
+  if (!ai) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+  return ai;
+};
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
@@ -35,7 +43,8 @@ export const generateCoachResponse = async (
   newMessage: string,
   context: CoachContext
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
+  const client = getAiClient();
+  if (!client) {
     return "I'm offline right now (API Key missing). Let's track some goals manually!";
   }
 
@@ -63,7 +72,7 @@ export const generateCoachResponse = async (
         parts: [{ text: msg.text }],
     }));
 
-    const chat = ai.chats.create({
+    const chat = client.chats.create({
       model: MODEL_NAME,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION + contextString,
@@ -81,7 +90,8 @@ export const generateCoachResponse = async (
 };
 
 export const predictTopicIcon = async (topicName: string): Promise<string | null> => {
-  if (!process.env.API_KEY) return null;
+  const client = getAiClient();
+  if (!client) return null;
 
   try {
     const prompt = `
@@ -100,7 +110,7 @@ export const predictTopicIcon = async (topicName: string): Promise<string | null
       - Default to 'zap' if unsure.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await client.models.generateContent({
       model: MODEL_NAME,
       contents: prompt,
     });
