@@ -7,7 +7,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Play, Pause, Square, Plus, Trash2, X, Briefcase, Code, Book, Dumbbell, Zap, Coffee, PenTool, Music, Globe, Camera, Gamepad2, Heart } from 'lucide-react';
 import { storage } from '../services/storage';
-import { STORAGE_KEYS, TOPIC_ICONS } from '../constants';
+import { STORAGE_KEYS, TOPIC_COLORS, TOPIC_ICONS } from '../constants';
 
 const ICON_MAP: Record<string, any> = {
   'briefcase': Briefcase,
@@ -36,7 +36,7 @@ export const Tracking = () => {
   const { user } = useAuth();
   const { 
     topics, activeTopicId, timerState, elapsedSeconds,
-    addTopic, deleteTopic, selectTopic, startTimer, pauseTimer, stopTimer, resumeTimer 
+    addTopic, updateTopic, addManualMinutes, deleteTopic, selectTopic, startTimer, pauseTimer, stopTimer, resumeTimer 
   } = useData();
 
   const [isAdding, setIsAdding] = useState(false);
@@ -47,6 +47,14 @@ export const Tracking = () => {
   const [topicToDelete, setTopicToDelete] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+
+  // Edit Topic Modal State
+  const [topicToEditId, setTopicToEditId] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editIcon, setEditIcon] = useState('zap');
+  const [editColor, setEditColor] = useState(TOPIC_COLORS[0]);
+  const [manualMinutesToAdd, setManualMinutesToAdd] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -72,6 +80,40 @@ export const Tracking = () => {
       setSelectedIcon('zap');
       setIsAdding(false);
     }
+  };
+
+  const openEditModal = (e: React.MouseEvent, topicId: string) => {
+    e.stopPropagation();
+    const topic = topics.find(t => t.id === topicId);
+    if (!topic) return;
+    setTopicToEditId(topicId);
+    setEditName(topic.name);
+    setEditIcon(topic.icon || 'zap');
+    setEditColor(topic.color);
+    setManualMinutesToAdd('');
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setTopicToEditId(null);
+    setManualMinutesToAdd('');
+  };
+
+  const saveTopicEdits = () => {
+    if (!topicToEditId) return;
+    const name = editName.trim();
+    if (!name) return;
+    updateTopic(topicToEditId, { name, icon: editIcon, color: editColor });
+    closeEditModal();
+  };
+
+  const applyManualMinutes = () => {
+    if (!topicToEditId) return;
+    const minutes = Number(manualMinutesToAdd);
+    if (!Number.isFinite(minutes) || minutes <= 0) return;
+    addManualMinutes(topicToEditId, minutes);
+    setManualMinutesToAdd('');
   };
 
   const initiateDelete = (e: React.MouseEvent, id: string) => {
@@ -229,6 +271,15 @@ export const Tracking = () => {
                         {formatDuration(displayTotalMinutes)}
                     </div>
                 </div>
+
+                <button
+                    onClick={(e) => openEditModal(e, topic.id)}
+                    className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-[#3A3A3C] active:scale-95 transition-all"
+                    aria-label="Edit topic"
+                    type="button"
+                >
+                    <PenTool size={18} />
+                </button>
              </Card>
           );
         })}
@@ -378,6 +429,99 @@ export const Tracking = () => {
                 </div>
             </div>
         </div>
+    )}
+
+    {/* Edit Topic Modal */}
+    {showEditModal && topicToEditId && (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={closeEditModal}
+        />
+        <div className="relative bg-[#1C1C1E] w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-scale-press border border-white/10 p-6 flex flex-col space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading text-xl font-bold text-white">Edit Topic</h3>
+            <button onClick={closeEditModal} className="p-2 -mr-2 text-[#8E8E93] hover:text-white transition-colors" type="button">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-[#2C2C2E] rounded-2xl px-2 py-1">
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full bg-transparent text-white text-[17px] placeholder-[#8E8E93] h-12 px-4 border-none outline-none font-medium"
+                placeholder="Topic Name"
+              />
+            </div>
+
+            <div>
+              <label className="text-[13px] text-textSecondary font-medium mb-2 block">Icon</label>
+              <div className="flex flex-wrap gap-2">
+                {TOPIC_ICONS.map(icon => {
+                  const IconComp = ICON_MAP[icon];
+                  const isSelected = editIcon === icon;
+                  return (
+                    <button
+                      key={icon}
+                      type="button"
+                      onClick={() => setEditIcon(icon)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isSelected ? 'bg-white text-black scale-110 shadow-lg' : 'bg-[#2C2C2E] text-[#8E8E93] hover:bg-[#3A3A3C]'}`}
+                    >
+                      <IconComp size={18} strokeWidth={2.5} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[13px] text-textSecondary font-medium mb-2 block">Color</label>
+              <div className="flex flex-wrap gap-2">
+                {TOPIC_COLORS.map(color => {
+                  const isSelected = editColor === color;
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setEditColor(color)}
+                      className={`w-9 h-9 rounded-full border transition-all ${isSelected ? 'ring-2 ring-white/80 border-white/30 scale-110' : 'border-white/10'}`}
+                      style={{ backgroundColor: color }}
+                      aria-label="Select color"
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[13px] text-textSecondary font-medium block">Add Minutes</label>
+              <div className="flex gap-2">
+                <input
+                  value={manualMinutesToAdd}
+                  onChange={(e) => setManualMinutesToAdd(e.target.value)}
+                  inputMode="numeric"
+                  className="flex-1 bg-[#2C2C2E] rounded-2xl h-12 px-4 text-white outline-none"
+                  placeholder="e.g. 30"
+                />
+                <Button type="button" variant="secondary" onClick={applyManualMinutes} className="h-12">
+                  Add
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 space-y-3">
+            <Button type="button" fullWidth onClick={saveTopicEdits} disabled={!editName.trim()}>
+              Save Changes
+            </Button>
+            <Button type="button" variant="ghost" fullWidth onClick={closeEditModal} className="text-[#8E8E93] hover:text-white">
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

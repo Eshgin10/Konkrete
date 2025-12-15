@@ -7,6 +7,13 @@ import { predictTopicIcon } from '../services/geminiService';
 import { useAuth } from './AuthContext';
 import { generateUUID } from '../services/uuid';
 
+type PersistedTimer = {
+  activeTopicId: string | null;
+  timerState: TimerState;
+  startedAt: number | null;
+  elapsedSeconds: number;
+};
+
 interface DataContextType {
   topics: Topic[];
   sessions: Session[];
@@ -15,6 +22,8 @@ interface DataContextType {
   elapsedSeconds: number;
   
   addTopic: (name: string, icon?: string) => void;
+  updateTopic: (id: string, updates: Partial<Pick<Topic, 'name' | 'icon' | 'color'>>) => void;
+  addManualMinutes: (id: string, minutesToAdd: number) => void;
   deleteTopic: (id: string) => void;
   selectTopic: (topicId: string) => void;
   startTimer: () => void;
@@ -31,6 +40,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const pendingHydrationUserIdRef = useRef<string | null>(null);
+  const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
   
   // Timer State (Ephemeral)
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
@@ -39,13 +50,59 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const timerIntervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
+  const persistTimer = (next: PersistedTimer) => {
+    if (!user) return;
+    storage.setForUser(user.id, STORAGE_KEYS.ACTIVE_TIMER, next);
+  };
+
+  const updateTopic = (id: string, updates: Partial<Pick<Topic, 'name' | 'icon' | 'color'>>) => {
+    if (!user) return;
+    setTopics(prev => {
+      const next = prev.map(t => (t.id === id ? { ...t, ...updates } : t));
+      storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
+      return next;
+    });
+  };
+
+  const addManualMinutes = (id: string, minutesToAdd: number) => {
+    if (!user) return;
+    if (!Number.isFinite(minutesToAdd) || minutesToAdd <= 0) return;
+    setTopics(prev => {
+      const next = prev.map(t => (t.id === id ? { ...t, totalMinutes: t.totalMinutes + minutesToAdd } : t));
+      storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
+      return next;
+    });
+  };
+
+  const clearPersistedTimer = () => {
+    if (!user) return;
+    storage.removeForUser(user.id, STORAGE_KEYS.ACTIVE_TIMER);
+  };
+
   // 1. Load Data When User Changes
   useEffect(() => {
     if (user) {
+        pendingHydrationUserIdRef.current = user.id;
+        setHydratedUserId(null);
         const loadedTopics = storage.getForUser<Topic[]>(user.id, STORAGE_KEYS.TOPICS, []);
         const loadedSessions = storage.getForUser<Session[]>(user.id, STORAGE_KEYS.SESSIONS, []);
+        const loadedTimer = storage.getForUser<PersistedTimer | null>(user.id, STORAGE_KEYS.ACTIVE_TIMER, null);
         setTopics(loadedTopics);
         setSessions(loadedSessions);
+
+        if (loadedTimer) {
+          setActiveTopicId(loadedTimer.activeTopicId);
+          setTimerState(loadedTimer.timerState);
+
+          if (loadedTimer.timerState === 'running' && loadedTimer.startedAt) {
+            const computedElapsed = Math.max(0, Math.floor((Date.now() - loadedTimer.startedAt) / 1000));
+            setElapsedSeconds(computedElapsed);
+            startTimeRef.current = loadedTimer.startedAt;
+          } else {
+            setElapsedSeconds(loadedTimer.elapsedSeconds || 0);
+            startTimeRef.current = null;
+          }
+        }
     } else {
         // Clear sensitive data from memory on logout
         setTopics([]);
@@ -53,35 +110,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setTimerState('idle');
         setElapsedSeconds(0);
         setActiveTopicId(null);
+        pendingHydrationUserIdRef.current = null;
+        setHydratedUserId(null);
     }
   }, [user?.id]); // Only re-run if actual user ID changes
 
+  // Mark hydration complete only after loaded state is committed.
+  useEffect(() => {
+    if (!user) return;
+    if (pendingHydrationUserIdRef.current !== user.id) return;
+    if (hydratedUserId === user.id) return;
+    setHydratedUserId(user.id);
+  }, [topics, sessions, user?.id, hydratedUserId]);
+
   // 2. Persist Data When It Changes (User Scoped)
   useEffect(() => {
-    if (user && topics.length > 0) {
-        storage.setForUser(user.id, STORAGE_KEYS.TOPICS, topics);
-    } else if (user && topics.length === 0) {
-        // Handle case where user deleted all topics, need to sync empty array
-        // Check if we have ever saved to avoid overwriting initial load
-        // But since we load on mount, this is safe-ish. 
-        // Better: ensure we don't save empty array over existing data during initial mount race
-        // The Load effect runs first.
-        storage.setForUser(user.id, STORAGE_KEYS.TOPICS, topics);
-    }
+    if (!user || hydratedUserId !== user.id) return;
+    storage.setForUser(user.id, STORAGE_KEYS.TOPICS, topics);
   }, [topics, user?.id]);
 
   useEffect(() => {
-    if (user && sessions.length > 0) {
-        storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, sessions);
-    } else if (user && sessions.length === 0) {
-        storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, sessions);
-    }
+    if (!user || hydratedUserId !== user.id) return;
+    storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, sessions);
   }, [sessions, user?.id]);
 
   // Timer Logic
   useEffect(() => {
     if (timerState === 'running') {
-      startTimeRef.current = Date.now() - (elapsedSeconds * 1000);
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now() - (elapsedSeconds * 1000);
+      }
       timerIntervalRef.current = window.setInterval(() => {
         setElapsedSeconds(Math.floor((Date.now() - (startTimeRef.current || Date.now())) / 1000));
       }, 1000);
@@ -94,6 +152,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [timerState]);
+
+  // Keep persisted timer in sync on key state transitions.
+  useEffect(() => {
+    if (!user || hydratedUserId !== user.id) return;
+    if (timerState === 'idle') {
+      clearPersistedTimer();
+      return;
+    }
+
+    const payload: PersistedTimer = {
+      activeTopicId,
+      timerState,
+      startedAt: timerState === 'running' ? (startTimeRef.current || Date.now()) : null,
+      elapsedSeconds,
+    };
+    persistTimer(payload);
+  }, [activeTopicId, timerState, elapsedSeconds, user?.id, hydratedUserId]);
 
   const addTopic = (name: string, icon?: string) => {
     if (!user) return;
@@ -110,7 +185,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createdAt: Date.now()
     };
     
-    setTopics(prev => [...prev, newTopic]);
+    setTopics(prev => {
+      const next = [...prev, newTopic];
+      storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
+      return next;
+    });
 
     if (!icon) {
       predictTopicIcon(name).then((predictedIcon) => {
@@ -132,18 +211,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         stopTimer();
     }
     
-    setTopics(prev => prev.filter(t => t.id !== id));
-    setSessions(prev => prev.filter(s => s.topicId !== id));
+    setTopics(prev => {
+      const next = prev.filter(t => t.id !== id);
+      storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
+      return next;
+    });
+    setSessions(prev => {
+      const next = prev.filter(s => s.topicId !== id);
+      storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, next);
+      return next;
+    });
   };
 
   const selectTopic = (topicId: string) => {
     setActiveTopicId(topicId);
     setElapsedSeconds(0);
     setTimerState('idle');
+    startTimeRef.current = null;
   };
 
   const startTimer = () => {
     if (activeTopicId) {
+        startTimeRef.current = Date.now() - (elapsedSeconds * 1000);
         setTimerState('running');
     }
   };
@@ -153,6 +242,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const resumeTimer = () => {
+    startTimeRef.current = Date.now() - (elapsedSeconds * 1000);
     setTimerState('running');
   };
 
@@ -172,25 +262,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         durationSeconds: duration
       };
       
-      setSessions(prev => [newSession, ...prev]);
+      setSessions(prev => {
+        const next = [newSession, ...prev];
+        storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, next);
+        return next;
+      });
       
-      setTopics(prev => prev.map(t => {
-        if (t.id === activeTopicId) {
-          return { ...t, totalMinutes: t.totalMinutes + (duration / 60) };
-        }
-        return t;
-      }));
+      setTopics(prev => {
+        const next = prev.map(t => {
+          if (t.id === activeTopicId) {
+            return { ...t, totalMinutes: t.totalMinutes + (duration / 60) };
+          }
+          return t;
+        });
+        storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
+        return next;
+      });
     }
 
     setTimerState('idle');
     setElapsedSeconds(0);
     setActiveTopicId(null);
+    startTimeRef.current = null;
   };
 
   return (
     <DataContext.Provider value={{
       topics, sessions, activeTopicId, timerState, elapsedSeconds,
-      addTopic, deleteTopic, selectTopic, startTimer, pauseTimer, stopTimer, resumeTimer
+      addTopic, updateTopic, addManualMinutes, deleteTopic, selectTopic, startTimer, pauseTimer, stopTimer, resumeTimer
     }}>
       {children}
     </DataContext.Provider>

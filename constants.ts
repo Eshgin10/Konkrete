@@ -46,6 +46,7 @@ export const STORAGE_KEYS = {
   PROFILE: 'profile',
   TOPICS: 'topics',
   SESSIONS: 'sessions',
+  ACTIVE_TIMER: 'active_timer',
   CHAT_HISTORY: 'chat',
   NOTIFICATIONS: 'notifications',
   SKIP_DELETE_CONFIRM: 'skip_delete_confirm',
