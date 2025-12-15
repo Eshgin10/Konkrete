@@ -67,6 +67,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addManualMinutes = (id: string, minutesToAdd: number) => {
     if (!user) return;
     if (!Number.isFinite(minutesToAdd) || minutesToAdd <= 0) return;
+
+    const topic = topics.find(t => t.id === id);
+    if (!topic) return;
+
+    const durationSeconds = Math.floor(minutesToAdd * 60);
+    const endTime = Date.now();
+    const startTime = endTime - (durationSeconds * 1000);
+
+    const newSession: Session = {
+      id: generateUUID(),
+      topicId: id,
+      topicName: topic.name,
+      startTime,
+      endTime,
+      durationSeconds,
+    };
+
+    setSessions(prev => {
+      const next = [newSession, ...prev];
+      storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, next);
+      return next;
+    });
+
     setTopics(prev => {
       const next = prev.map(t => (t.id === id ? { ...t, totalMinutes: t.totalMinutes + minutesToAdd } : t));
       storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
