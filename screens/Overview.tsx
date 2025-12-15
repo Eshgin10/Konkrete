@@ -15,9 +15,10 @@ const calculateStreak = (sessions: any[], user: User | null) => {
   
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const todayEnd = todayStart + 24 * 60 * 60 * 1000;
   
   // Filter sessions for today
-  const todaySessions = sessions.filter(s => s.startTime >= todayStart);
+  const todaySessions = sessions.filter(s => s.endTime > todayStart && s.startTime < todayEnd);
   
   // Calculate total seconds today
   const totalSecondsToday = todaySessions.reduce((acc, s) => acc + s.durationSeconds, 0);
@@ -125,8 +126,8 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
     
     // Process completed sessions
     sessions.forEach(session => {
-        if (session.startTime >= weekRange.start.getTime() && session.startTime <= weekRange.end.getTime()) {
-            const date = new Date(session.startTime);
+        if (session.endTime >= weekRange.start.getTime() && session.endTime <= weekRange.end.getTime()) {
+            const date = new Date(session.endTime);
             const dayIndex = (date.getDay() + 6) % 7; // Mon=0, Sun=6
             dayMap[dayIndex].minutes += (session.durationSeconds / 60);
         }
