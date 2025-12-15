@@ -18,7 +18,12 @@ const calculateStreak = (sessions: any[], user: User | null) => {
   const todayEnd = todayStart + 24 * 60 * 60 * 1000;
   
   // Filter sessions for today
-  const todaySessions = sessions.filter(s => s.endTime > todayStart && s.startTime < todayEnd);
+  const todaySessions = sessions.filter(s => {
+    const startTime = Number.isFinite(s?.startTime) ? s.startTime : (Number.isFinite(s?.endTime) ? s.endTime : NaN);
+    const endTime = Number.isFinite(s?.endTime) ? s.endTime : (Number.isFinite(s?.startTime) ? s.startTime : NaN);
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return false;
+    return endTime > todayStart && startTime < todayEnd;
+  });
   
   // Calculate total seconds today
   const totalSecondsToday = todaySessions.reduce((acc, s) => acc + s.durationSeconds, 0);
@@ -126,10 +131,14 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
     
     // Process completed sessions
     sessions.forEach(session => {
-        if (session.endTime >= weekRange.start.getTime() && session.endTime <= weekRange.end.getTime()) {
-            const date = new Date(session.endTime);
+        const bucketTime = Number.isFinite(session?.endTime) ? session.endTime : session?.startTime;
+        if (!Number.isFinite(bucketTime)) return;
+        if (bucketTime >= weekRange.start.getTime() && bucketTime <= weekRange.end.getTime()) {
+            const date = new Date(bucketTime);
             const dayIndex = (date.getDay() + 6) % 7; // Mon=0, Sun=6
-            dayMap[dayIndex].minutes += (session.durationSeconds / 60);
+            if (!Number.isFinite(dayIndex) || dayIndex < 0 || dayIndex > 6) return;
+            const durationSeconds = Number.isFinite(session?.durationSeconds) ? session.durationSeconds : 0;
+            dayMap[dayIndex].minutes += (durationSeconds / 60);
         }
     });
 
