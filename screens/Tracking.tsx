@@ -105,15 +105,13 @@ export const Tracking = () => {
     const name = editName.trim();
     if (!name) return;
     updateTopic(topicToEditId, { name, icon: editIcon, color: editColor });
-    closeEditModal();
-  };
 
-  const applyManualMinutes = () => {
-    if (!topicToEditId) return;
     const minutes = Number(manualMinutesToAdd);
-    if (!Number.isFinite(minutes) || minutes <= 0) return;
-    addManualMinutes(topicToEditId, minutes);
-    setManualMinutesToAdd('');
+    if (Number.isFinite(minutes) && minutes > 0) {
+      addManualMinutes(topicToEditId, minutes);
+    }
+
+    closeEditModal();
   };
 
   const initiateDelete = (e: React.MouseEvent, id: string) => {
@@ -497,7 +495,7 @@ export const Tracking = () => {
 
             <div className="space-y-2">
               <label className="text-[13px] text-textSecondary font-medium block">Add Minutes</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <input
                   value={manualMinutesToAdd}
                   onChange={(e) => setManualMinutesToAdd(e.target.value)}
@@ -505,9 +503,6 @@ export const Tracking = () => {
                   className="flex-1 bg-[#2C2C2E] rounded-2xl h-12 px-4 text-white outline-none"
                   placeholder="e.g. 30"
                 />
-                <Button type="button" variant="secondary" onClick={applyManualMinutes} className="h-12">
-                  Add
-                </Button>
               </div>
             </div>
           </div>
