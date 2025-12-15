@@ -185,7 +185,10 @@ export const Tracking = () => {
             </div>
           )}
           
-          <div className={`text-[56px] sm:text-[64px] font-medium font-mono tracking-tighter mb-10 tabular-nums leading-none transition-colors ${activeTopicId ? 'text-white' : 'text-white/20'}`}>
+          <div
+            className={`text-[56px] sm:text-[64px] font-medium font-mono tracking-tighter mb-10 tabular-nums leading-none transition-colors ${activeTopicId ? 'text-white' : 'text-white/20'}`}
+            style={{ fontVariantNumeric: 'slashed-zero tabular-nums' }}
+          >
             {formatTimerDisplay(elapsedSeconds)}
           </div>
 
@@ -500,7 +503,7 @@ export const Tracking = () => {
                   value={manualMinutesToAdd}
                   onChange={(e) => setManualMinutesToAdd(e.target.value)}
                   inputMode="numeric"
-                  className="flex-1 bg-[#2C2C2E] rounded-2xl h-12 px-4 text-white outline-none"
+                  className="flex-1 bg-[#2C2C2E] rounded-2xl h-14 px-4 text-white outline-none"
                   placeholder="e.g. 30"
                 />
               </div>
