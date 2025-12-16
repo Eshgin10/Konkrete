@@ -98,6 +98,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const { sessions, topics, activeTopicId, elapsedSeconds } = useData();
   const [weekOffset, setWeekOffset] = useState(0);
+  const [focusPeriod, setFocusPeriod] = useState<'3d' | '7d' | '30d'>('7d');
 
   // Merge active timer data into topics for real-time display
   const displayTopics = useMemo(() => {
@@ -132,11 +133,68 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   // Daily Goal (convert seconds to minutes for the chart). Default to 0 if not set.
   const dailyGoalMinutes = (user?.preferences.dailyGoalSeconds ?? 0) / 60;
 
-  const chartData = displayTopics.map(t => ({
-    name: t.name,
-    value: t.totalMinutes,
-    color: t.color
-  })).filter(d => d.value > 0);
+  const focusRange = useMemo(() => {
+    const now = new Date();
+    const endMs = now.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const days = focusPeriod === '3d' ? 3 : focusPeriod === '7d' ? 7 : 30;
+    const startMs = startOfToday - (days - 1) * dayMs;
+
+    return { startMs, endMs, days };
+  }, [focusPeriod]);
+
+  const focusDistribution = useMemo(() => {
+    const byTopic = new Map<string, { name: string; color: string; seconds: number }>();
+
+    const topicMeta = new Map<string, { name: string; color: string }>();
+    topics.forEach(t => {
+      topicMeta.set(t.id, { name: t.name, color: t.color });
+    });
+
+    for (const s of displaySessions) {
+      const startTime = Number.isFinite(s?.startTime) ? s.startTime : (Number.isFinite(s?.endTime) ? s.endTime : NaN);
+      const endTime = Number.isFinite(s?.endTime) ? s.endTime : (Number.isFinite(s?.startTime) ? s.startTime : NaN);
+      const topicId = typeof s?.topicId === 'string' ? s.topicId : '';
+      if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || !topicId) continue;
+
+      const normalizedStart = Math.min(startTime, endTime);
+      const normalizedEnd = Math.max(startTime, endTime);
+      if (normalizedEnd <= focusRange.startMs || normalizedStart >= focusRange.endMs) continue;
+
+      const overlapStart = Math.max(normalizedStart, focusRange.startMs);
+      const overlapEnd = Math.min(normalizedEnd, focusRange.endMs);
+      if (overlapEnd <= overlapStart) continue;
+
+      const seconds = Math.floor((overlapEnd - overlapStart) / 1000);
+      const meta = topicMeta.get(topicId);
+      const name = meta?.name || s.topicName || 'Unknown';
+      const color = meta?.color || '#2C2C2E';
+
+      const prev = byTopic.get(topicId) || { name, color, seconds: 0 };
+      prev.seconds += seconds;
+      byTopic.set(topicId, prev);
+    }
+
+    const items = Array.from(byTopic.entries()).map(([topicId, v]) => ({
+      topicId,
+      name: v.name,
+      color: v.color,
+      minutes: v.seconds / 60,
+      seconds: v.seconds,
+    })).filter(i => i.seconds > 0);
+
+    items.sort((a, b) => b.seconds - a.seconds);
+
+    const totalSecondsInPeriod = items.reduce((acc, i) => acc + i.seconds, 0);
+
+    return {
+      items,
+      chartData: items.map(i => ({ name: i.name, value: i.minutes, color: i.color })),
+      totalMinutesInPeriod: totalSecondsInPeriod / 60,
+    };
+  }, [displaySessions, focusRange.startMs, focusRange.endMs, topics]);
   
   // Weekly Data Logic
   const getWeekDateRange = (offset: number) => {
@@ -200,7 +258,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
     return 'Good evening';
   };
 
-  const centerText = formatDurationCenter(totalMinutes);
+  const centerText = formatDurationCenter(focusDistribution.totalMinutesInPeriod);
 
   return (
     <div className="flex flex-col h-full space-y-6 pb-24 animate-slide-up">
@@ -237,13 +295,24 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
 
       {/* Focus Distribution */}
       <Card className="shadow-sm">
-        <h3 className="font-heading font-bold text-xl mb-6 text-white tracking-tight text-center">Focus Distribution</h3>
+        <div className="flex items-center justify-between mb-6 px-2">
+          <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Focus Distribution</h3>
+          <select
+            value={focusPeriod}
+            onChange={(e) => setFocusPeriod(e.target.value as '3d' | '7d' | '30d')}
+            className="bg-[#2C2C2E] text-white text-[13px] font-semibold rounded-lg px-3 py-2 outline-none border border-[#38383A]"
+          >
+            <option value="3d">Last 3 days</option>
+            <option value="7d">Last week</option>
+            <option value="30d">Last month</option>
+          </select>
+        </div>
         <div className="flex flex-col items-center">
             <div className="h-64 w-64 relative flex-shrink-0 mb-6">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
-                            data={chartData.length ? chartData : [{value: 1}]} 
+                            data={focusDistribution.chartData.length ? focusDistribution.chartData : [{value: 1}]} 
                             innerRadius={80}
                             outerRadius={110}
                             paddingAngle={4}
@@ -251,7 +320,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                             stroke="none"
                             cornerRadius={8}
                         >
-                            {chartData.length ? chartData.map((entry, index) => (
+                            {focusDistribution.chartData.length ? focusDistribution.chartData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                             )) : <Cell fill="#2C2C2E" />}
                         </Pie>
@@ -264,13 +333,13 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             </div>
             
             <div className="w-full grid grid-cols-2 gap-3 px-2">
-                {displayTopics.map(t => (
-                    <div key={t.id} className="flex items-center justify-between text-[15px] bg-surfaceHighlight/30 p-2 rounded-lg">
+                {focusDistribution.items.map(t => (
+                    <div key={t.topicId} className="flex items-center justify-between text-[15px] bg-surfaceHighlight/30 p-2 rounded-lg">
                         <div className="flex items-center min-w-0">
                             <div className="w-2.5 h-2.5 rounded-full mr-2.5 flex-shrink-0" style={{backgroundColor: t.color}} />
                             <span className="text-gray-200 font-medium tracking-tight truncate">{t.name}</span>
                         </div>
-                        <span className="text-textSecondary text-[13px] ml-2 tabular-nums">{formatDuration(t.totalMinutes)}</span>
+                        <span className="text-textSecondary text-[13px] ml-2 tabular-nums">{formatDuration(t.minutes)}</span>
                     </div>
                 ))}
             </div>
