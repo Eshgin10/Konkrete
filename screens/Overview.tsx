@@ -4,41 +4,73 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { Bell, Flame, ChevronLeft, ChevronRight } from 'lucide-react';
-import { AppScreen, User } from '../types';
+import { AppScreen, User, Session } from '../types';
 
 interface OverviewProps {
   onNavigate: (screen: AppScreen) => void;
 }
 
-const calculateStreak = (sessions: any[], user: User | null) => {
-  if (!user || sessions.length === 0) return 0;
-  
+const calculateStreak = (sessions: Session[], user: User | null) => {
+  if (!user) return 0;
+
+  const minSeconds = user.preferences.streakMinSeconds || 600;
+  const minTopics = user.preferences.streakMinTopics || 1;
+
+  const getDayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const todayEnd = todayStart + 24 * 60 * 60 * 1000;
-  
-  // Filter sessions for today
-  const todaySessions = sessions.filter(s => {
+  const todayStart = getDayStart(now);
+
+  const dailyTotals = new Map<number, { seconds: number; topics: Set<string> }>();
+
+  for (const s of sessions) {
     const startTime = Number.isFinite(s?.startTime) ? s.startTime : (Number.isFinite(s?.endTime) ? s.endTime : NaN);
     const endTime = Number.isFinite(s?.endTime) ? s.endTime : (Number.isFinite(s?.startTime) ? s.startTime : NaN);
-    if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return false;
-    return endTime > todayStart && startTime < todayEnd;
-  });
-  
-  // Calculate total seconds today
-  const totalSecondsToday = todaySessions.reduce((acc, s) => acc + s.durationSeconds, 0);
-  
-  // Calculate unique topics today
-  const uniqueTopicsToday = new Set(todaySessions.map(s => s.topicId)).size;
-  
-  // Check against preferences
-  const minSeconds = user.preferences.streakMinSeconds || 600; // Default 10m
-  const minTopics = user.preferences.streakMinTopics || 1; // Default 1
-  
-  if (totalSecondsToday >= minSeconds && uniqueTopicsToday >= minTopics) {
-      return 1; // Simple "Streak Active" logic for demo. Real streak logic would look back.
+    const topicId = typeof s?.topicId === 'string' ? s.topicId : '';
+
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || !topicId) continue;
+
+    const normalizedStart = Math.min(startTime, endTime);
+    const normalizedEnd = Math.max(startTime, endTime);
+    if (normalizedEnd <= normalizedStart) continue;
+
+    let cursor = getDayStart(new Date(normalizedStart));
+    const lastDayStart = getDayStart(new Date(normalizedEnd));
+
+    while (cursor <= lastDayStart) {
+      const dayStart = cursor;
+      const dayEnd = dayStart + dayMs;
+      const overlapStart = Math.max(normalizedStart, dayStart);
+      const overlapEnd = Math.min(normalizedEnd, dayEnd);
+
+      if (overlapEnd > overlapStart) {
+        const seconds = Math.floor((overlapEnd - overlapStart) / 1000);
+        const prev = dailyTotals.get(dayStart) || { seconds: 0, topics: new Set<string>() };
+        prev.seconds += seconds;
+        prev.topics.add(topicId);
+        dailyTotals.set(dayStart, prev);
+      }
+
+      cursor += dayMs;
+    }
   }
-  return 0;
+
+  const meetsRequirements = (dayStart: number) => {
+    const entry = dailyTotals.get(dayStart);
+    if (!entry) return false;
+    return entry.seconds >= minSeconds && entry.topics.size >= minTopics;
+  };
+
+  let streak = 0;
+  let dayCursor = todayStart;
+  while (meetsRequirements(dayCursor)) {
+    streak += 1;
+    dayCursor -= dayMs;
+    if (streak > 3650) break;
+  }
+
+  return streak;
 };
 
 // Updated format: Always 0h 0m 0s
