@@ -366,6 +366,9 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                   dataKey="value"
                   stroke="none"
                   cornerRadius={8}
+                  animationDuration={1400}
+                  animationBegin={200}
+                  animationEasing="ease-out"
                 >
                   {focusDistribution.chartData.length ? focusDistribution.chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
