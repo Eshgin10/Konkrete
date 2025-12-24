@@ -300,7 +300,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
           <select
             value={focusPeriod}
             onChange={(e) => setFocusPeriod(e.target.value as '3d' | '7d' | '30d')}
-            className="bg-[#2C2C2E] text-white text-[12px] font-semibold rounded-md h-8 px-2.5 pr-3 outline-none border border-[#3A3A3C] shadow-sm cursor-pointer min-w-[120px] hover:border-[#4A4A4C] hover:bg-[#323234] transition-colors focus-visible:ring-2 focus-visible:ring-[#0A84FF]/40 focus-visible:border-[#0A84FF]/60"
+            className="bg-surfaceHighlight text-white text-[11px] font-semibold rounded-lg h-7 px-2 pr-6 outline-none border border-[#3A3A3C]/50 cursor-pointer hover:border-[#3A3A3C] hover:bg-[#323234] transition-all duration-200 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3e%3cpath fill=%27%238E8E93%27 d=%27M6 8L0 0h12z%27/%3e%3c/svg%3e')] bg-[length:10px] bg-[right_6px_center] bg-no-repeat"
           >
             <option value="3d">Last 3 days</option>
             <option value="7d">Last week</option>
