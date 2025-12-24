@@ -379,7 +379,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                 domain={[0, yAxisMax]}
               />
               <Tooltip
-                cursor={{ fill: '#2C2C2E' }}
+                cursor={{ fill: '#2C2C2E', stroke: 'none' }}
                 contentStyle={{ backgroundColor: '#1C1C1E', borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
                 itemStyle={{ color: '#fff' }}
                 formatter={(value: number) => [`${Math.round(value)} mins`, 'Focus']}
@@ -398,6 +398,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                 fill="#007AFF"
                 radius={[4, 4, 4, 4]}
                 barSize={32}
+                isAnimationActive={false}
               >
                 {weeklyData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.minutes > 0.1 ? '#007AFF' : '#2C2C2E'} />
