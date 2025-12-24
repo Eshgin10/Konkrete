@@ -3,7 +3,7 @@ import { Card } from '../components/Card';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { Bell, Flame, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Bell, Flame, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { AppScreen, User, Session } from '../types';
 
 interface OverviewProps {
@@ -98,7 +98,8 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const { sessions, topics, activeTopicId, elapsedSeconds } = useData();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [focusPeriod, setFocusPeriod] = useState<'3d' | '7d' | '30d'>('7d');
+  const [focusPeriod, setFocusPeriod] = useState<'this_week' | '3d' | '7d' | '30d' | 'all_time'>('this_week');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Merge active timer data into topics for real-time display
   const displayTopics = useMemo(() => {
@@ -138,11 +139,22 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
     const endMs = now.getTime();
     const dayMs = 24 * 60 * 60 * 1000;
 
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const days = focusPeriod === '3d' ? 3 : focusPeriod === '7d' ? 7 : 30;
-    const startMs = startOfToday - (days - 1) * dayMs;
+    if (focusPeriod === 'all_time') {
+      return { startMs: 0, endMs };
+    }
 
-    return { startMs, endMs, days };
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    let startMs = 0;
+
+    if (focusPeriod === 'this_week') {
+      const currentDay = now.getDay() || 7; // 1 (Mon) - 7 (Sun)
+      startMs = startOfToday - (currentDay - 1) * dayMs;
+    } else {
+      const days = focusPeriod === '3d' ? 3 : focusPeriod === '7d' ? 7 : 30;
+      startMs = startOfToday - (days - 1) * dayMs;
+    }
+
+    return { startMs, endMs };
   }, [focusPeriod]);
 
   const focusDistribution = useMemo(() => {
@@ -297,15 +309,50 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       <Card className="shadow-sm">
         <div className="flex items-center justify-between mb-6 px-2">
           <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Focus Distribution</h3>
-          <select
-            value={focusPeriod}
-            onChange={(e) => setFocusPeriod(e.target.value as '3d' | '7d' | '30d')}
-            className="bg-surfaceHighlight text-white text-[11px] font-semibold rounded-lg h-7 px-2 pr-6 outline-none border border-[#3A3A3C]/50 cursor-pointer hover:border-[#3A3A3C] hover:bg-[#323234] transition-all duration-200 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3e%3cpath fill=%27%238E8E93%27 d=%27M6 8L0 0h12z%27/%3e%3c/svg%3e')] bg-[length:10px] bg-[right_6px_center] bg-no-repeat"
-          >
-            <option value="3d">Last 3 days</option>
-            <option value="7d">Last week</option>
-            <option value="30d">Last month</option>
-          </select>
+          <div className="relative z-20">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-1.5 bg-surfaceHighlight text-white text-[11px] font-semibold rounded-lg h-7 px-2.5 outline-none border border-[#3A3A3C]/50 cursor-pointer hover:border-[#3A3A3C] hover:bg-[#323234] transition-all duration-200"
+            >
+              <span>
+                {focusPeriod === 'this_week' && 'This Week'}
+                {focusPeriod === '3d' && 'Last 3 Days'}
+                {focusPeriod === '7d' && 'Last 7 Days'}
+                {focusPeriod === '30d' && 'Last Month'}
+                {focusPeriod === 'all_time' && 'All Time'}
+              </span>
+              <ChevronDown size={12} className={`text-textSecondary transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
+                <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#1C1C1E]/95 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-xl shadow-2xl py-1 z-20 overflow-hidden ring-1 ring-black/5">
+                  {[
+                    { id: 'this_week', label: 'This Week' },
+                    { id: '3d', label: 'Last 3 Days' },
+                    { id: '7d', label: 'Last 7 Days' },
+                    { id: '30d', label: 'Last Month' },
+                    { id: 'all_time', label: 'All Time' },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        setFocusPeriod(option.id as any);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-[12px] font-medium transition-colors ${focusPeriod === option.id
+                        ? 'text-primary bg-primary/10'
+                        : 'text-gray-200 hover:bg-[#323234]'
+                        }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <div className="flex flex-col items-center">
           <div className="h-64 w-64 relative flex-shrink-0 mb-6">
