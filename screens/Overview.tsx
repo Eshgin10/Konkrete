@@ -300,7 +300,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
           <select
             value={focusPeriod}
             onChange={(e) => setFocusPeriod(e.target.value as '3d' | '7d' | '30d')}
-            className="bg-[#2C2C2E] text-white text-[13px] font-semibold rounded-lg px-3 py-2 outline-none border border-[#38383A]"
+            className="bg-[#2C2C2E] text-white text-[12px] font-semibold rounded-md h-8 px-2.5 pr-3 outline-none border border-[#3A3A3C] shadow-sm cursor-pointer min-w-[120px] hover:border-[#4A4A4C] hover:bg-[#323234] transition-colors focus-visible:ring-2 focus-visible:ring-[#0A84FF]/40 focus-visible:border-[#0A84FF]/60"
           >
             <option value="3d">Last 3 days</option>
             <option value="7d">Last week</option>
