@@ -96,40 +96,20 @@ const formatDurationCenter = (totalMinutes: number) => {
 
 export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { sessions, topics, activeTopicId, elapsedSeconds } = useData();
+  const { sessions, topics } = useData();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [focusPeriod, setFocusPeriod] = useState<'this_week' | '3d' | '7d' | '30d' | 'all_time'>('this_week');
+  const [focusPeriod, setFocusPeriod] = useState<'this_week' | '3d' | '7d' | '30d' | 'all_time'>(() => {
+    const saved = localStorage.getItem('focusPeriod');
+    return (saved as 'this_week' | '3d' | '7d' | '30d' | 'all_time') || 'this_week';
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Merge active timer data into topics for real-time display
-  const displayTopics = useMemo(() => {
-    if (!activeTopicId) return topics;
-    return topics.map(t => {
-      if (t.id === activeTopicId) {
-        return { ...t, totalMinutes: t.totalMinutes + (elapsedSeconds / 60) };
-      }
-      return t;
-    });
-  }, [topics, activeTopicId, elapsedSeconds]);
+  React.useEffect(() => {
+    localStorage.setItem('focusPeriod', focusPeriod);
+  }, [focusPeriod]);
 
-  // Merge active timer into sessions for streak check in real-time
-  const displaySessions = useMemo(() => {
-    if (activeTopicId && elapsedSeconds > 0) {
-      const tempSession = {
-        id: 'temp',
-        topicId: activeTopicId,
-        topicName: '', // not needed for calc
-        startTime: Date.now() - elapsedSeconds * 1000,
-        endTime: Date.now(),
-        durationSeconds: elapsedSeconds
-      };
-      return [...sessions, tempSession];
-    }
-    return sessions;
-  }, [sessions, activeTopicId, elapsedSeconds]);
-
-  const streak = calculateStreak(displaySessions, user);
-  const totalMinutes = displayTopics.reduce((acc, t) => acc + t.totalMinutes, 0);
+  const streak = calculateStreak(sessions, user);
+  const totalMinutes = topics.reduce((acc, t) => acc + t.totalMinutes, 0);
 
   // Daily Goal (convert seconds to minutes for the chart). Default to 0 if not set.
   const dailyGoalMinutes = (user?.preferences.dailyGoalSeconds ?? 0) / 60;
@@ -165,7 +145,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       topicMeta.set(t.id, { name: t.name, color: t.color });
     });
 
-    for (const s of displaySessions) {
+    for (const s of sessions) {
       const startTime = Number.isFinite(s?.startTime) ? s.startTime : (Number.isFinite(s?.endTime) ? s.endTime : NaN);
       const endTime = Number.isFinite(s?.endTime) ? s.endTime : (Number.isFinite(s?.startTime) ? s.startTime : NaN);
       const topicId = typeof s?.topicId === 'string' ? s.topicId : '';
@@ -206,7 +186,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       chartData: items.map(i => ({ name: i.name, value: i.minutes, color: i.color })),
       totalMinutesInPeriod: totalSecondsInPeriod / 60,
     };
-  }, [displaySessions, focusRange.startMs, focusRange.endMs, topics]);
+  }, [sessions, focusRange.startMs, focusRange.endMs, topics]);
 
   // Weekly Data Logic
   const getWeekDateRange = (offset: number) => {
@@ -244,18 +224,9 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       }
     });
 
-    // Process active session if running
-    if (activeTopicId && elapsedSeconds > 0) {
-      const now = new Date();
-      if (now.getTime() >= weekRange.start.getTime() && now.getTime() <= weekRange.end.getTime()) {
-        const dayIndex = (now.getDay() + 6) % 7;
-        dayMap[dayIndex].minutes += (elapsedSeconds / 60);
-      }
-    }
-
     // Allow decimals for smooth visual updates
     return dayMap.map(d => ({ ...d, minutes: Number(d.minutes.toFixed(2)) }));
-  }, [sessions, weekRange.start, weekRange.end, activeTopicId, elapsedSeconds]);
+  }, [sessions, weekRange.start, weekRange.end]);
 
   // Calculate Y-axis domain to ensure Goal Line is always visible (if set)
   // We find the max value in the data, compare it to the goal (if > 0), and add some padding.
