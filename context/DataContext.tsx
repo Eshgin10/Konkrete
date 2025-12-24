@@ -17,14 +17,18 @@ type PersistedTimer = {
 interface DataContextType {
   topics: Topic[];
   sessions: Session[];
-  activeTopicId: string | null;
-  timerState: TimerState;
-  elapsedSeconds: number;
-  
+
   addTopic: (name: string, icon?: string) => void;
   updateTopic: (id: string, updates: Partial<Pick<Topic, 'name' | 'icon' | 'color'>>) => void;
   addManualMinutes: (id: string, minutesToAdd: number) => void;
   deleteTopic: (id: string) => void;
+}
+
+interface TimerContextType {
+  activeTopicId: string | null;
+  timerState: TimerState;
+  elapsedSeconds: number;
+
   selectTopic: (topicId: string) => void;
   startTimer: () => void;
   pauseTimer: () => void;
@@ -33,6 +37,7 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Inject Auth to get userId
@@ -42,7 +47,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [sessions, setSessions] = useState<Session[]>([]);
   const pendingHydrationUserIdRef = useRef<string | null>(null);
   const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
-  
+
   // Timer State (Ephemeral)
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [timerState, setTimerState] = useState<TimerState>('idle');
@@ -105,36 +110,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 1. Load Data When User Changes
   useEffect(() => {
     if (user) {
-        pendingHydrationUserIdRef.current = user.id;
-        setHydratedUserId(null);
-        const loadedTopics = storage.getForUser<Topic[]>(user.id, STORAGE_KEYS.TOPICS, []);
-        const loadedSessions = storage.getForUser<Session[]>(user.id, STORAGE_KEYS.SESSIONS, []);
-        const loadedTimer = storage.getForUser<PersistedTimer | null>(user.id, STORAGE_KEYS.ACTIVE_TIMER, null);
-        setTopics(loadedTopics);
-        setSessions(loadedSessions);
+      pendingHydrationUserIdRef.current = user.id;
+      setHydratedUserId(null);
+      const loadedTopics = storage.getForUser<Topic[]>(user.id, STORAGE_KEYS.TOPICS, []);
+      const loadedSessions = storage.getForUser<Session[]>(user.id, STORAGE_KEYS.SESSIONS, []);
+      const loadedTimer = storage.getForUser<PersistedTimer | null>(user.id, STORAGE_KEYS.ACTIVE_TIMER, null);
+      setTopics(loadedTopics);
+      setSessions(loadedSessions);
 
-        if (loadedTimer) {
-          setActiveTopicId(loadedTimer.activeTopicId);
-          setTimerState(loadedTimer.timerState);
+      if (loadedTimer) {
+        setActiveTopicId(loadedTimer.activeTopicId);
+        setTimerState(loadedTimer.timerState);
 
-          if (loadedTimer.timerState === 'running' && loadedTimer.startedAt) {
-            const computedElapsed = Math.max(0, Math.floor((Date.now() - loadedTimer.startedAt) / 1000));
-            setElapsedSeconds(computedElapsed);
-            startTimeRef.current = loadedTimer.startedAt;
-          } else {
-            setElapsedSeconds(loadedTimer.elapsedSeconds || 0);
-            startTimeRef.current = null;
-          }
+        if (loadedTimer.timerState === 'running' && loadedTimer.startedAt) {
+          const computedElapsed = Math.max(0, Math.floor((Date.now() - loadedTimer.startedAt) / 1000));
+          setElapsedSeconds(computedElapsed);
+          startTimeRef.current = loadedTimer.startedAt;
+        } else {
+          setElapsedSeconds(loadedTimer.elapsedSeconds || 0);
+          startTimeRef.current = null;
         }
+      }
     } else {
-        // Clear sensitive data from memory on logout
-        setTopics([]);
-        setSessions([]);
-        setTimerState('idle');
-        setElapsedSeconds(0);
-        setActiveTopicId(null);
-        pendingHydrationUserIdRef.current = null;
-        setHydratedUserId(null);
+      // Clear sensitive data from memory on logout
+      setTopics([]);
+      setSessions([]);
+      setTimerState('idle');
+      setElapsedSeconds(0);
+      setActiveTopicId(null);
+      pendingHydrationUserIdRef.current = null;
+      setHydratedUserId(null);
     }
   }, [user?.id]); // Only re-run if actual user ID changes
 
@@ -198,7 +203,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const color = TOPIC_COLORS[topics.length % TOPIC_COLORS.length];
     const initialIcon = icon || TOPIC_ICONS[topics.length % TOPIC_ICONS.length];
-    
+
     const newTopic: Topic = {
       id: generateUUID(),
       name,
@@ -207,7 +212,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       totalMinutes: 0,
       createdAt: Date.now()
     };
-    
+
     setTopics(prev => {
       const next = [...prev, newTopic];
       storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
@@ -217,8 +222,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!icon) {
       predictTopicIcon(name).then((predictedIcon) => {
         if (predictedIcon) {
-          setTopics(currentTopics => 
-            currentTopics.map(t => 
+          setTopics(currentTopics =>
+            currentTopics.map(t =>
               t.id === newTopic.id ? { ...t, icon: predictedIcon } : t
             )
           );
@@ -231,9 +236,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user) return;
 
     if (activeTopicId === id) {
-        stopTimer();
+      stopTimer();
     }
-    
+
     setTopics(prev => {
       const next = prev.filter(t => t.id !== id);
       storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
@@ -255,8 +260,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const startTimer = () => {
     if (activeTopicId) {
-        startTimeRef.current = Date.now() - (elapsedSeconds * 1000);
-        setTimerState('running');
+      startTimeRef.current = Date.now() - (elapsedSeconds * 1000);
+      setTimerState('running');
     }
   };
 
@@ -274,8 +279,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const duration = elapsedSeconds;
     const sessionTopic = topics.find(t => t.id === activeTopicId);
-    
-    if (sessionTopic && duration > 0) { 
+
+    if (sessionTopic && duration > 0) {
       const newSession: Session = {
         id: generateUUID(),
         topicId: activeTopicId,
@@ -284,13 +289,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         endTime: Date.now(),
         durationSeconds: duration
       };
-      
+
       setSessions(prev => {
         const next = [newSession, ...prev];
         storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, next);
         return next;
       });
-      
+
       setTopics(prev => {
         const next = prev.map(t => {
           if (t.id === activeTopicId) {
@@ -309,12 +314,31 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startTimeRef.current = null;
   };
 
+  const dataContextValue = React.useMemo(() => ({
+    topics,
+    sessions,
+    addTopic,
+    updateTopic,
+    addManualMinutes,
+    deleteTopic
+  }), [topics, sessions, user?.id, hydratedUserId, activeTopicId]); // Dependencies for functions
+
+  const timerContextValue = React.useMemo(() => ({
+    activeTopicId,
+    timerState,
+    elapsedSeconds,
+    selectTopic,
+    startTimer,
+    pauseTimer,
+    stopTimer,
+    resumeTimer
+  }), [activeTopicId, timerState, elapsedSeconds, topics, user?.id]); // Dependencies for timer functions
+
   return (
-    <DataContext.Provider value={{
-      topics, sessions, activeTopicId, timerState, elapsedSeconds,
-      addTopic, updateTopic, addManualMinutes, deleteTopic, selectTopic, startTimer, pauseTimer, stopTimer, resumeTimer
-    }}>
-      {children}
+    <DataContext.Provider value={dataContextValue}>
+      <TimerContext.Provider value={timerContextValue}>
+        {children}
+      </TimerContext.Provider>
     </DataContext.Provider>
   );
 };
@@ -323,6 +347,14 @@ export const useData = () => {
   const context = useContext(DataContext);
   if (context === undefined) {
     throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+};
+
+export const useTimer = () => {
+  const context = useContext(TimerContext);
+  if (context === undefined) {
+    throw new Error('useTimer must be used within a DataProvider');
   }
   return context;
 };
