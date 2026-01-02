@@ -438,7 +438,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => startEditing(obj.id, obj.text)}
                       className="p-2 text-textSecondary hover:text-white transition-all"
