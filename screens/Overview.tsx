@@ -3,7 +3,7 @@ import { Card } from '../components/Card';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { Bell, Flame, ChevronLeft, ChevronRight, ChevronDown, Target, Plus, Trash2, Check, ExternalLink, Pencil, Dumbbell } from 'lucide-react';
+import { Bell, Flame, ChevronLeft, ChevronRight, ChevronDown, Target, Plus, Trash2, Check, ExternalLink, Pencil, Dumbbell, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { AppScreen, User, Session } from '../types';
 
@@ -458,39 +458,13 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
           )}
 
           {/* Add Objective Button / Input */}
-          {isAddingObjective ? (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <input
-                autoFocus
-                type="text"
-                value={newObjectiveText}
-                onChange={(e) => setNewObjectiveText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddObjective()}
-                placeholder="What is your focus this week?"
-                className="flex-1 bg-[#2C2C2E] text-white text-[14px] px-4 py-3 rounded-xl border-2 border-primary/50 outline-none placeholder:text-textSecondary/50"
-              />
-              <button
-                onClick={handleAddObjective}
-                className="bg-primary hover:bg-primary/90 text-white font-medium px-4 py-3 rounded-xl text-[13px] transition-colors"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => setIsAddingObjective(false)}
-                className="bg-[#2C2C2E] hover:bg-[#3A3A3C] text-textSecondary hover:text-white px-3 py-3 rounded-xl transition-colors"
-              >
-                <Plus size={20} className="rotate-45" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAddingObjective(true)}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-[#3A3A3C] text-textSecondary hover:text-white hover:border-[#5A5A5E] hover:bg-[#3A3A3C]/10 transition-all group"
-            >
-              <Plus size={18} className="group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-medium">Add Objective</span>
-            </button>
-          )}
+          <button
+            onClick={() => setIsAddingObjective(true)}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-[#3A3A3C] text-textSecondary hover:text-white hover:border-[#5A5A5E] hover:bg-[#3A3A3C]/10 transition-all group"
+          >
+            <Plus size={18} className="group-hover:scale-110 transition-transform" />
+            <span className="text-sm font-medium">Add Objective</span>
+          </button>
         </div>
       </Card>
 
@@ -717,6 +691,53 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
           </ResponsiveContainer>
         </div>
       </Card >
+
+      {/* Add Objective Modal */}
+      {isAddingObjective && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 sm:items-center sm:pt-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#1C1C1E] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-[#2C2C2E]/30">
+              <h3 className="font-heading font-bold text-lg text-white">Add Objective</h3>
+              <button
+                onClick={() => setIsAddingObjective(false)}
+                className="p-1 text-textSecondary hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-textSecondary uppercase tracking-wider mb-2">
+                  Goal for week {currentObjectiveWeek.week}
+                </label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newObjectiveText}
+                  onChange={(e) => setNewObjectiveText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddObjective()}
+                  placeholder="What is your main focus?"
+                  className="w-full bg-[#2C2C2E] text-white text-[15px] px-4 py-3.5 rounded-xl border border-white/10 focus:border-primary/50 outline-none placeholder:text-textSecondary/50 transition-colors"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setIsAddingObjective(false)}
+                  className="flex-1 py-3 rounded-xl bg-[#2C2C2E] text-textSecondary font-medium hover:bg-[#3A3A3C] hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddObjective}
+                  className="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  Add Objective
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };
