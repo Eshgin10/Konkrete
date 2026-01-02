@@ -3,7 +3,8 @@ import { Card } from '../components/Card';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { Bell, Flame, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Bell, Flame, ChevronLeft, ChevronRight, ChevronDown, Target, Plus, Trash2, Check, ExternalLink, Pencil, Dumbbell } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { AppScreen, User, Session } from '../types';
 
 interface OverviewProps {
@@ -92,17 +93,83 @@ const formatDurationCenter = (totalMinutes: number) => {
   if (h > 0) return { val: `${h}h ${m}m`, unit: `${s}s` };
   if (m > 0) return { val: `${m}m`, unit: `${s}s` };
   return { val: `0h 0m`, unit: `${s}s` };
+  if (m > 0) return { val: `${m}m`, unit: `${s}s` };
+  return { val: `0h 0m`, unit: `${s}s` };
+};
+
+const getWeekNumber = (d: Date) => {
+  // ISO 8601 week number
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return {
+    year: date.getUTCFullYear(),
+    week: Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  };
 };
 
 export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { sessions, topics } = useData();
+  const { sessions, topics, objectives, addObjective, deleteObjective, toggleObjective, updateObjective, gymDays, toggleGymDay } = useData();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [focusPeriod, setFocusPeriod] = useState<'this_week' | '3d' | '7d' | '30d' | 'all_time'>(() => {
+
+  // Gym Calendar State
+  const [gymMonthOffset, setGymMonthOffset] = useState(0);
+
+  // Weekly Objectives State (Locked to current week)
+  const [isAddingObjective, setIsAddingObjective] = useState(false);
+  const [newObjectiveText, setNewObjectiveText] = useState('');
+
+  // Editing State
+  const [editingObjectiveId, setEditingObjectiveId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+
+  const currentObjectiveWeek = useMemo(() => {
+    return getWeekNumber(new Date());
+  }, []);
+
+  const weekObjectives = useMemo(() => {
+    return objectives.filter(o => o.year === currentObjectiveWeek.year && o.week === currentObjectiveWeek.week);
+  }, [objectives, currentObjectiveWeek]);
+
+  const handleAddObjective = () => {
+    if (!newObjectiveText.trim()) return;
+    addObjective(newObjectiveText, currentObjectiveWeek.year, currentObjectiveWeek.week);
+    setNewObjectiveText('');
+    setIsAddingObjective(false);
+  };
+
+  const startEditing = (id: string, currentText: string) => {
+    setEditingObjectiveId(id);
+    setEditingText(currentText);
+  };
+
+  const handleUpdateObjective = () => {
+    if (editingObjectiveId && editingText.trim()) {
+      updateObjective(editingObjectiveId, editingText);
+      setEditingObjectiveId(null);
+      setEditingText('');
+    }
+  };
+
+  const handleToggleObjective = (id: string, currentlyCompleted: boolean) => {
+    toggleObjective(id);
+    if (!currentlyCompleted) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  };
+  const [focusPeriod, setFocusPeriod] = useState<'today' | 'this_week' | '3d' | '7d' | '30d' | 'all_time'>(() => {
     const saved = localStorage.getItem('focusPeriod');
-    return (saved as 'this_week' | '3d' | '7d' | '30d' | 'all_time') || 'this_week';
+    return (saved as 'today' | 'this_week' | '3d' | '7d' | '30d' | 'all_time') || 'this_week';
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+
 
   React.useEffect(() => {
     localStorage.setItem('focusPeriod', focusPeriod);
@@ -126,7 +193,9 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     let startMs = 0;
 
-    if (focusPeriod === 'this_week') {
+    if (focusPeriod === 'today') {
+      startMs = startOfToday;
+    } else if (focusPeriod === 'this_week') {
       const currentDay = now.getDay() || 7; // 1 (Mon) - 7 (Sun)
       startMs = startOfToday - (currentDay - 1) * dayMs;
     } else {
@@ -243,13 +312,54 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
 
   const centerText = formatDurationCenter(focusDistribution.totalMinutesInPeriod);
 
+  // Gym Stats Calculation
+  const gymStats = useMemo(() => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Filter gym days to only include this year
+    const gymDaysThisYear = gymDays.filter(d => d.startsWith(`${now.getFullYear()}-`));
+    const count = gymDaysThisYear.length;
+    const percentage = dayOfYear > 0 ? Math.round((count / dayOfYear) * 100) : 0;
+
+    return { count, percentage };
+  }, [gymDays]);
+
+  // Calendar Grid Generation
+  const calendarData = useMemo(() => {
+    const now = new Date();
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + gymMonthOffset, 1);
+    const monthName = targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
+    const startDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1).getDay() || 7; // ISO: 1-7
+
+    // Generate dates
+    const days = [];
+    // Empty slots for start padding
+    for (let i = 1; i < startDay; i++) {
+      days.push(null);
+    }
+    // Days
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      days.push({ day: i, iso });
+    }
+
+    return { monthName, days };
+  }, [gymMonthOffset]);
+
   return (
     <div className="flex flex-col h-full space-y-6 pb-24 animate-slide-up">
 
       {/* Header */}
+      {/* Header */}
       <div className="flex justify-between items-end pt-2 px-1">
         <div>
-          <h2 className="text-[13px] font-semibold text-primary mb-1 opacity-90">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+          <h2 className="text-[13px] font-semibold text-primary mb-1 opacity-90">
+            {new Date().getFullYear()} • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </h2>
           <h1 className="font-heading text-4xl font-bold tracking-tight text-white leading-tight">{getGreeting()}</h1>
         </div>
         <div
@@ -261,7 +371,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       </div>
 
       {/* Streak Card */}
-      <Card gradient className="relative overflow-hidden border-0 shadow-xl shadow-blue-900/20">
+      <Card className="relative overflow-hidden border border-white/5 shadow-2xl shadow-black/50 bg-gradient-to-br from-[#323234] to-[#18181a]">
         <div className="relative z-10 flex flex-row items-center justify-between px-2">
           <div>
             <div className="text-[13px] font-bold text-white/80 mb-2">Current Streak</div>
@@ -276,8 +386,184 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
       </Card>
 
-      {/* Focus Distribution */}
+
+      {/* Objective Card */}
       <Card className="shadow-sm">
+        <div className="flex items-center justify-between mb-4 px-2">
+          <div className="flex items-center gap-2">
+            <Target size={20} className="text-primary" />
+            <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Weekly Objectives</h3>
+          </div>
+          <div className="flex items-center gap-2 bg-[#2C2C2E] rounded-lg p-2">
+            <span className="text-[12px] font-semibold tabular-nums text-white min-w-[50px] text-center">
+              Week {currentObjectiveWeek.week}
+            </span>
+          </div>
+        </div>
+
+        <div className="px-2 flex flex-col gap-2">
+          {weekObjectives.length > 0 && (
+            <div className="flex flex-col gap-2 mb-2">
+              {weekObjectives.map(obj => (
+                <div key={obj.id} className={`group flex items-center justify-between p-3 rounded-xl border transition-all ${obj.completed
+                  ? 'bg-green-500/20 border-green-500/30'
+                  : 'bg-[#2C2C2E]/50 border-white/5 hover:border-white/10'
+                  }`}>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <button
+                      onClick={() => handleToggleObjective(obj.id, obj.completed)}
+                      className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${obj.completed
+                        ? 'bg-green-500 border-green-500'
+                        : 'border-[#48484A] hover:border-primary/50'
+                        }`}
+                    >
+                      {obj.completed && <Check size={14} className="text-white animate-in zoom-in duration-200" />}
+                    </button>
+
+                    {editingObjectiveId === obj.id ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onBlur={handleUpdateObjective}
+                        onKeyDown={(e) => e.key === 'Enter' && handleUpdateObjective()}
+                        className="flex-1 bg-transparent text-white text-[16px] font-medium outline-none border-b border-primary/50 pb-0.5"
+                      />
+                    ) : (
+                      <span className={`text-[16px] font-medium truncate transition-all duration-300 ${obj.completed ? 'text-white' : 'text-gray-200'
+                        }`}>
+                        {obj.text}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => startEditing(obj.id, obj.text)}
+                      className="p-2 text-textSecondary hover:text-white transition-all"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => deleteObjective(obj.id)}
+                      className="p-2 text-textSecondary hover:text-[#FF453A] transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Objective Button / Input */}
+          {isAddingObjective ? (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <input
+                autoFocus
+                type="text"
+                value={newObjectiveText}
+                onChange={(e) => setNewObjectiveText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddObjective()}
+                placeholder="What is your focus this week?"
+                className="flex-1 bg-[#2C2C2E] text-white text-[14px] px-4 py-3 rounded-xl border-2 border-primary/50 outline-none placeholder:text-textSecondary/50"
+              />
+              <button
+                onClick={handleAddObjective}
+                className="bg-primary hover:bg-primary/90 text-white font-medium px-4 py-3 rounded-xl text-[13px] transition-colors"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => setIsAddingObjective(false)}
+                className="bg-[#2C2C2E] hover:bg-[#3A3A3C] text-textSecondary hover:text-white px-3 py-3 rounded-xl transition-colors"
+              >
+                <Plus size={20} className="rotate-45" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAddingObjective(true)}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-[#3A3A3C] text-textSecondary hover:text-white hover:border-[#5A5A5E] hover:bg-[#3A3A3C]/10 transition-all group"
+            >
+              <Plus size={18} className="group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium">Add Objective</span>
+            </button>
+          )}
+        </div>
+      </Card>
+
+      {/* Gym Card */}
+      < Card className="shadow-sm" >
+        <div className="flex items-center justify-between mb-4 px-2">
+          <div className="flex items-center gap-2">
+            <Dumbbell size={20} className="text-primary" />
+            <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Gym</h3>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] uppercase tracking-wider text-textSecondary font-bold">Progress</span>
+              <span className="text-white font-bold text-sm tabular-nums">{gymStats.percentage}%</span>
+            </div>
+            <div className="w-[1px] h-6 bg-[#3A3A3C]"></div>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] uppercase tracking-wider text-textSecondary font-bold">Total Days</span>
+              <span className="text-white font-bold text-sm tabular-nums">{gymStats.count}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar Header */}
+        <div className="flex items-center justify-between bg-[#2C2C2E]/50 rounded-t-xl p-3 border-b border-white/5">
+          <button onClick={() => setGymMonthOffset(p => p - 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-[13px] font-semibold text-white">{calendarData.monthName}</span>
+          <button onClick={() => setGymMonthOffset(p => p + 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="bg-[#1C1C1E] border border-white/5 border-t-0 rounded-b-xl p-4">
+          {/* Weekday Labels */}
+          <div className="grid grid-cols-7 mb-2 text-center">
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+              <span key={i} className="text-[10px] font-bold text-[#8E8E93]">{day}</span>
+            ))}
+          </div>
+
+          {/* Days */}
+          <div className="grid grid-cols-7 gap-y-2 place-items-center">
+            {calendarData.days.map((d, i) => {
+              if (!d) return <div key={i} />;
+              const isChecked = gymDays.includes(d.iso);
+              const isToday = d.iso === new Date().toISOString().split('T')[0];
+
+              return (
+                <div
+                  key={d.iso}
+                  onClick={() => toggleGymDay(d.iso)}
+                  className={`
+                        w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-medium cursor-pointer transition-all duration-200 select-none
+                        ${isChecked
+                      ? 'bg-primary text-white shadow-[0_0_10px_rgba(0,122,255,0.4)] scale-105'
+                      : 'bg-[#2C2C2E] text-[#8E8E93] hover:bg-[#3A3A3C] hover:text-white'
+                    }
+                        ${isToday && !isChecked ? 'ring-1 ring-primary text-primary' : ''}
+                     `}
+                >
+                  {d.day}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Card >
+
+      {/* Focus Distribution */}
+      < Card className="shadow-sm" >
         <div className="flex items-center justify-between mb-6 px-2">
           <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Focus Distribution</h3>
           <div className="relative z-20">
@@ -286,6 +572,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
               className="flex items-center gap-1.5 bg-surfaceHighlight text-white text-[11px] font-semibold rounded-lg h-7 px-2.5 outline-none border border-[#3A3A3C]/50 cursor-pointer hover:border-[#3A3A3C] hover:bg-[#323234] transition-all duration-200"
             >
               <span>
+                {focusPeriod === 'today' && 'Today'}
                 {focusPeriod === 'this_week' && 'This Week'}
                 {focusPeriod === '3d' && 'Last 3 Days'}
                 {focusPeriod === '7d' && 'Last 7 Days'}
@@ -300,6 +587,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                 <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
                 <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#1C1C1E]/95 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-xl shadow-2xl py-1 z-20 overflow-hidden ring-1 ring-black/5">
                   {[
+                    { id: 'today', label: 'Today' },
                     { id: 'this_week', label: 'This Week' },
                     { id: '3d', label: 'Last 3 Days' },
                     { id: '7d', label: 'Last 7 Days' },
@@ -365,10 +653,10 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             ))}
           </div>
         </div>
-      </Card>
+      </Card >
 
       {/* Weekly Activity */}
-      <Card className="shadow-sm">
+      < Card className="shadow-sm" >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2 bg-[#2C2C2E] rounded-lg p-1">
             <button onClick={() => setWeekOffset(p => p - 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
@@ -428,7 +716,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 };

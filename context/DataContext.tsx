@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { Topic, Session, TimerState } from '../types';
+import { Topic, Session, TimerState, Objective } from '../types';
 import { storage } from '../services/storage';
 import { STORAGE_KEYS, TOPIC_COLORS, TOPIC_ICONS } from '../constants';
 import { predictTopicIcon } from '../services/geminiService';
@@ -17,11 +17,18 @@ type PersistedTimer = {
 interface DataContextType {
   topics: Topic[];
   sessions: Session[];
+  objectives: Objective[];
 
   addTopic: (name: string, icon?: string) => void;
   updateTopic: (id: string, updates: Partial<Pick<Topic, 'name' | 'icon' | 'color'>>) => void;
   addManualMinutes: (id: string, minutesToAdd: number) => void;
   deleteTopic: (id: string) => void;
+  addObjective: (text: string, year: number, week: number) => void;
+  updateObjective: (id: string, text: string) => void;
+  toggleObjective: (id: string) => void;
+  deleteObjective: (id: string) => void;
+  gymDays: string[];
+  toggleGymDay: (dateStr: string) => void;
 }
 
 interface TimerContextType {
@@ -45,6 +52,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [gymDays, setGymDays] = useState<string[]>([]);
   const pendingHydrationUserIdRef = useRef<string | null>(null);
   const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
 
@@ -117,6 +126,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const loadedTimer = storage.getForUser<PersistedTimer | null>(user.id, STORAGE_KEYS.ACTIVE_TIMER, null);
       setTopics(loadedTopics);
       setSessions(loadedSessions);
+      setObjectives(storage.getForUser<Objective[]>(user.id, STORAGE_KEYS.OBJECTIVES, []));
+      setGymDays(storage.getForUser<string[]>(user.id, STORAGE_KEYS.GYM_DAYS, []));
 
       if (loadedTimer) {
         setActiveTopicId(loadedTimer.activeTopicId);
@@ -135,6 +146,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Clear sensitive data from memory on logout
       setTopics([]);
       setSessions([]);
+      setObjectives([]);
+      setGymDays([]);
       setTimerState('idle');
       setElapsedSeconds(0);
       setActiveTopicId(null);
@@ -161,6 +174,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user || hydratedUserId !== user.id) return;
     storage.setForUser(user.id, STORAGE_KEYS.SESSIONS, sessions);
   }, [sessions, user?.id]);
+
+  useEffect(() => {
+    if (!user || hydratedUserId !== user.id) return;
+    storage.setForUser(user.id, STORAGE_KEYS.OBJECTIVES, objectives);
+  }, [objectives, user?.id]);
+
+  useEffect(() => {
+    if (!user || hydratedUserId !== user.id) return;
+    storage.setForUser(user.id, STORAGE_KEYS.GYM_DAYS, gymDays);
+  }, [gymDays, user?.id]);
 
   // Timer Logic
   useEffect(() => {
@@ -314,14 +337,80 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startTimeRef.current = null;
   };
 
+  const addObjective = (text: string, year: number, week: number) => {
+    if (!user) return;
+    const newObjective: Objective = {
+      id: generateUUID(),
+      text,
+      completed: false,
+      year,
+      week,
+      createdAt: Date.now(),
+    };
+    setObjectives(prev => {
+      const next = [...prev, newObjective];
+      storage.setForUser(user.id, STORAGE_KEYS.OBJECTIVES, next);
+      return next;
+    });
+  };
+
+  const updateObjective = (id: string, text: string) => {
+    if (!user) return;
+    setObjectives(prev => {
+      const next = prev.map(o => o.id === id ? { ...o, text } : o);
+      storage.setForUser(user.id, STORAGE_KEYS.OBJECTIVES, next);
+      return next;
+    });
+  };
+
+  const toggleObjective = (id: string) => {
+    if (!user) return;
+    setObjectives(prev => {
+      const next = prev.map(o => o.id === id ? { ...o, completed: !o.completed } : o);
+      storage.setForUser(user.id, STORAGE_KEYS.OBJECTIVES, next);
+      return next;
+    });
+  };
+
+  const deleteObjective = (id: string) => {
+    if (!user) return;
+    setObjectives(prev => {
+      const next = prev.filter(o => o.id !== id);
+      storage.setForUser(user.id, STORAGE_KEYS.OBJECTIVES, next);
+      return next;
+    });
+  };
+
+  const toggleGymDay = (dateStr: string) => {
+    if (!user) return;
+    setGymDays(prev => {
+      const exists = prev.includes(dateStr);
+      let next;
+      if (exists) {
+        next = prev.filter(d => d !== dateStr);
+      } else {
+        next = [...prev, dateStr];
+      }
+      storage.setForUser(user.id, STORAGE_KEYS.GYM_DAYS, next);
+      return next;
+    });
+  };
+
   const dataContextValue = React.useMemo(() => ({
     topics,
     sessions,
+    objectives,
     addTopic,
     updateTopic,
     addManualMinutes,
-    deleteTopic
-  }), [topics, sessions, user?.id, hydratedUserId, activeTopicId]); // Dependencies for functions
+    deleteTopic,
+    addObjective,
+    updateObjective,
+    toggleObjective,
+    deleteObjective,
+    gymDays,
+    toggleGymDay
+  }), [topics, sessions, objectives, gymDays, user?.id, hydratedUserId, activeTopicId]); // Dependencies for functions
 
   const timerContextValue = React.useMemo(() => ({
     activeTopicId,

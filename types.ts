@@ -49,6 +49,15 @@ export interface Notification {
   read: boolean;
 }
 
+export interface Objective {
+  id: string;
+  text: string;
+  completed: boolean;
+  year: number;
+  week: number;
+  createdAt: number;
+}
+
 export enum AppTab {
   Overview = 'Overview',
   Tracking = 'Tracking',

@@ -50,6 +50,8 @@ export const STORAGE_KEYS = {
   CHAT_HISTORY: 'chat',
   NOTIFICATIONS: 'notifications',
   SKIP_DELETE_CONFIRM: 'skip_delete_confirm',
+  OBJECTIVES: 'objectives',
+  GYM_DAYS: 'gym_days',
 };
 
 export const DEFAULT_DAILY_GOAL = 60; // Minutes
