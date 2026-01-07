@@ -117,7 +117,8 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   // Gym Calendar State
   const [gymMonthOffset, setGymMonthOffset] = useState(0);
 
-  // Weekly Objectives State (Locked to current week)
+  // Weekly Objectives State
+  const [objectiveWeekOffset, setObjectiveWeekOffset] = useState(0);
   const [isAddingObjective, setIsAddingObjective] = useState(false);
   const [newObjectiveText, setNewObjectiveText] = useState('');
 
@@ -126,8 +127,11 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
   const [editingText, setEditingText] = useState('');
 
   const currentObjectiveWeek = useMemo(() => {
-    return getWeekNumber(new Date());
-  }, []);
+    const now = new Date();
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + (objectiveWeekOffset * 7));
+    return getWeekNumber(targetDate);
+  }, [objectiveWeekOffset]);
 
   const weekObjectives = useMemo(() => {
     return objectives.filter(o => o.year === currentObjectiveWeek.year && o.week === currentObjectiveWeek.week);
@@ -326,6 +330,8 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
     return { count, percentage };
   }, [gymDays]);
 
+  const focusView = user?.preferences.focusDistributionView || 'pie';
+
   // Calendar Grid Generation
   const calendarData = useMemo(() => {
     const now = new Date();
@@ -394,10 +400,16 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             <Target size={20} className="text-primary" />
             <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Weekly Objectives</h3>
           </div>
-          <div className="flex items-center gap-2 bg-[#2C2C2E] rounded-lg p-2">
+          <div className="flex items-center gap-2 bg-[#2C2C2E] rounded-lg p-1">
+            <button onClick={() => setObjectiveWeekOffset(p => p - 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
+              <ChevronLeft size={16} />
+            </button>
             <span className="text-[12px] font-semibold tabular-nums text-white min-w-[50px] text-center">
               Week {currentObjectiveWeek.week}
             </span>
+            <button onClick={() => setObjectiveWeekOffset(p => p + 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
 
@@ -588,31 +600,61 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
           </div>
         </div>
         <div className="flex flex-col items-center">
-          <div className="h-64 w-64 relative flex-shrink-0 mb-6">
+          <div className={`h-64 w-full relative flex-shrink-0 mb-6 ${focusView === 'pie' ? 'max-w-[256px]' : ''}`}>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={focusDistribution.chartData.length ? focusDistribution.chartData : [{ value: 1 }]}
-                  innerRadius={80}
-                  outerRadius={110}
-                  paddingAngle={4}
-                  dataKey="value"
-                  stroke="none"
-                  cornerRadius={8}
-                  animationDuration={1400}
-                  animationBegin={200}
-                  animationEasing="ease-out"
-                >
-                  {focusDistribution.chartData.length ? focusDistribution.chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  )) : <Cell fill="#2C2C2E" />}
-                </Pie>
-              </PieChart>
+              {focusView === 'pie' ? (
+                <PieChart>
+                  <Pie
+                    data={focusDistribution.chartData.length ? focusDistribution.chartData : [{ value: 1 }]}
+                    innerRadius={80}
+                    outerRadius={110}
+                    paddingAngle={4}
+                    dataKey="value"
+                    stroke="none"
+                    cornerRadius={8}
+                    animationDuration={1400}
+                    animationBegin={200}
+                    animationEasing="ease-out"
+                  >
+                    {focusDistribution.chartData.length ? focusDistribution.chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    )) : <Cell fill="#2C2C2E" />}
+                  </Pie>
+                </PieChart>
+              ) : (
+                <BarChart data={focusDistribution.chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#8E8E93', fontSize: 10 }}
+                    interval={0}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#8E8E93', fontSize: 10 }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#2C2C2E', opacity: 0.5 }}
+                    contentStyle={{ backgroundColor: '#1C1C1E', borderRadius: '12px', border: 'none' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 4, 4]}>
+                    {focusDistribution.chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              )}
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-3xl font-bold tabular-nums tracking-tight text-white">{centerText.val}</span>
-              <span className="text-sm text-textSecondary font-medium mt-1">{centerText.unit}</span>
-            </div>
+
+            {focusView === 'pie' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-3xl font-bold tabular-nums tracking-tight text-white">{centerText.val}</span>
+                <span className="text-sm text-textSecondary font-medium mt-1">{centerText.unit}</span>
+              </div>
+            )}
           </div>
 
           <div className="w-full flex flex-col gap-2 px-2">
