@@ -240,6 +240,9 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       const topicId = typeof s?.topicId === 'string' ? s.topicId : '';
       if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || !topicId) continue;
 
+      // Only include sessions for currently active topics
+      if (!topicMeta.has(topicId)) continue;
+
       const normalizedStart = Math.min(startTime, endTime);
       const normalizedEnd = Math.max(startTime, endTime);
 
@@ -433,25 +436,24 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             </div>
             <div>
               <h3 className="font-heading font-bold text-[17px] text-white tracking-tight leading-none mb-0.5">Weekly Objectives</h3>
-              <p className="text-[11px] text-textSecondary font-medium">Clear your targets</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-surfaceHighlight/80 backdrop-blur-md rounded-md p-0.5 border border-white/5">
+          <div className="flex items-center gap-0.5 bg-surfaceHighlight/80 backdrop-blur-md rounded-md p-0.5 border border-white/5">
             <button
               onClick={() => setObjectiveWeekOffset(p => p - 1)}
-              className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-textSecondary hover:text-white transition-all active:scale-95"
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-textSecondary hover:text-white transition-all active:scale-95"
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={13} />
             </button>
-            <span className="text-[11px] font-bold tabular-nums text-white px-2 min-w-[40px] text-center">
+            <span className="text-[11px] font-bold tabular-nums text-white px-1.5 min-w-[24px] text-center">
               W{currentObjectiveWeek.week}
             </span>
             <button
               onClick={() => setObjectiveWeekOffset(p => p + 1)}
-              className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-textSecondary hover:text-white transition-all active:scale-95"
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-textSecondary hover:text-white transition-all active:scale-95"
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={13} />
             </button>
           </div>
         </div>
@@ -544,11 +546,13 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Calendar Header */}
-        <div className="flex items-center justify-between bg-surfaceHighlight/50 rounded-t-xl p-3 border-b border-white/5">
+        <div className="flex items-center justify-between bg-surfaceHighlight rounded-t-xl p-3 border-b border-white/5">
           <button onClick={() => setGymMonthOffset(p => p - 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
             <ChevronLeft size={16} />
           </button>
-          <span className="text-[13px] font-semibold text-white">{calendarData.monthName}</span>
+          <div className="px-3 py-1 rounded-md bg-white/5 border border-white/5">
+            <span className="text-[13px] font-semibold text-white tracking-tight">{calendarData.monthName}</span>
+          </div>
           <button onClick={() => setGymMonthOffset(p => p + 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
             <ChevronRight size={16} />
           </button>
@@ -702,7 +706,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
 
           <div className="w-full flex flex-col gap-2 px-2">
             {focusDistribution.items.map(t => (
-              <div key={t.topicId} className="flex items-center justify-between text-[15px] bg-surfaceHighlight/30 p-3 rounded-lg">
+              <div key={t.topicId} className="flex items-center justify-between text-[15px] bg-surfaceHighlight/30 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
                 <div className="flex items-center min-w-0">
                   <div className="w-2.5 h-2.5 rounded-full mr-2.5 flex-shrink-0" style={{ backgroundColor: t.color }} />
                   <span className="text-gray-200 font-medium tracking-tight truncate">{t.name}</span>
