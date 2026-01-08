@@ -87,7 +87,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const durationSeconds = Math.floor(minutesToAdd * 60);
     const endTime = Date.now();
-    const startTime = endTime - (durationSeconds * 1000);
+    // For negative adjustments, we create a point-in-time event (start = end)
+    // For positive adjustments, we create an interval ending now
+    const startTime = durationSeconds < 0 ? endTime : endTime - (durationSeconds * 1000);
 
     const newSession: Session = {
       id: generateUUID(),

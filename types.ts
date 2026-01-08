@@ -9,7 +9,7 @@ export interface User {
     streakMinSeconds: number;
     streakMinTopics: number;
     dailyGoalSeconds: number;
-    theme: 'dark' | 'light';
+    themeId: string;
     focusDistributionView?: 'pie' | 'bar';
   };
 }

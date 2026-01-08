@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
 import { storage } from '../services/storage';
-import { STORAGE_KEYS } from '../constants';
+import { STORAGE_KEYS, APP_THEMES, DEFAULT_THEME_ID } from '../constants';
 import { generateUUID } from '../services/uuid';
 
 interface AuthContextType {
@@ -25,54 +25,68 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     // 1. Check for active session ID on mount
     const activeUserId = storage.get<string | null>(STORAGE_KEYS.ACTIVE_SESSION, null);
-    
+
     if (activeUserId) {
-        // 2. Load that user's profile
-        const storedUser = storage.getForUser<User | null>(activeUserId, STORAGE_KEYS.PROFILE, null);
-        if (storedUser) {
-            setUser(storedUser);
-        } else {
-            // Data integrity issue: Active ID exists but profile gone. Clear active session.
-            storage.remove(STORAGE_KEYS.ACTIVE_SESSION);
-        }
+      // 2. Load that user's profile
+      const storedUser = storage.getForUser<User | null>(activeUserId, STORAGE_KEYS.PROFILE, null);
+      if (storedUser) {
+        setUser(storedUser);
+      } else {
+        // Data integrity issue: Active ID exists but profile gone. Clear active session.
+        storage.remove(STORAGE_KEYS.ACTIVE_SESSION);
+      }
     }
+    setIsLoading(false);
     setIsLoading(false);
   }, []);
 
+  // Apply Theme Effect
+  useEffect(() => {
+    const themeId = user?.preferences.themeId || DEFAULT_THEME_ID;
+    const theme = APP_THEMES.find(t => t.id === themeId);
+    if (theme) {
+      document.documentElement.style.setProperty('--color-primary', theme.color);
+      document.documentElement.style.setProperty('--color-secondary', (theme as any).secondary || theme.color); // Fallback for safety
+      document.documentElement.style.setProperty('--color-background', theme.background);
+      document.documentElement.style.setProperty('--color-surface', theme.surface);
+      document.documentElement.style.setProperty('--color-surface-highlight', theme.surfaceHighlight);
+    }
+  }, [user?.preferences.themeId]);
+
   const login = async (email: string, password?: string) => {
     await new Promise(resolve => setTimeout(resolve, 800)); // Fake network delay
-    
+
     // 1. Check User Index for Email -> ID mapping
     const userIndex = storage.get<Record<string, string>>(STORAGE_KEYS.USERS_INDEX, {});
     const userId = userIndex[email];
 
     if (userId) {
-        // 2. Load User Profile
-        const storedUser = storage.getForUser<User | null>(userId, STORAGE_KEYS.PROFILE, null);
-        
-        if (storedUser) {
-            // Check password if provided (skip for guest/legacy if needed, but new flow requires it)
-            if (password && storedUser.password !== password) {
-                throw new Error("Invalid email or password.");
-            }
+      // 2. Load User Profile
+      const storedUser = storage.getForUser<User | null>(userId, STORAGE_KEYS.PROFILE, null);
 
-            setUser(storedUser);
-            // 3. Set Active Session
-            storage.set(STORAGE_KEYS.ACTIVE_SESSION, userId);
-            return;
+      if (storedUser) {
+        // Check password if provided (skip for guest/legacy if needed, but new flow requires it)
+        if (password && storedUser.password !== password) {
+          throw new Error("Invalid email or password.");
         }
+
+        setUser(storedUser);
+        // 3. Set Active Session
+        storage.set(STORAGE_KEYS.ACTIVE_SESSION, userId);
+        return;
+      }
     }
-    
+
     throw new Error("User not found locally. Please register.");
   };
 
   const register = async (email: string, displayName: string, password?: string) => {
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     // Check if email already exists
     const userIndex = storage.get<Record<string, string>>(STORAGE_KEYS.USERS_INDEX, {});
     if (userIndex[email]) {
-        throw new Error("User already exists locally. Please login.");
+      throw new Error("User already exists locally. Please login.");
     }
 
     const newUser: User = {
@@ -85,10 +99,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         streakMinSeconds: 600,
         streakMinTopics: 1,
         dailyGoalSeconds: 0,
-        theme: 'dark'
+        themeId: DEFAULT_THEME_ID
       }
     };
-    
+
     // 1. Save Profile (User Scoped)
     storage.setForUser(newUser.id, STORAGE_KEYS.PROFILE, newUser);
 
@@ -106,24 +120,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const guestEmail = "guest@local";
     const userIndex = storage.get<Record<string, string>>(STORAGE_KEYS.USERS_INDEX, {});
-    
+
     let guestId = userIndex[guestEmail];
     let guestUser: User;
 
     if (guestId) {
-        // Restore existing guest
-        guestUser = storage.getForUser(guestId, STORAGE_KEYS.PROFILE, null) as User;
-        if (!guestUser) {
-            // Recovery if corrupted
-            guestId = `guest-${generateUUID()}`;
-            guestUser = createGuestUser(guestId, guestEmail);
-        }
-    } else {
-        // Create new guest
+      // Restore existing guest
+      guestUser = storage.getForUser(guestId, STORAGE_KEYS.PROFILE, null) as User;
+      if (!guestUser) {
+        // Recovery if corrupted
         guestId = `guest-${generateUUID()}`;
         guestUser = createGuestUser(guestId, guestEmail);
+      }
+    } else {
+      // Create new guest
+      guestId = `guest-${generateUUID()}`;
+      guestUser = createGuestUser(guestId, guestEmail);
     }
-    
+
     // Save/Update Guest
     storage.setForUser(guestId, STORAGE_KEYS.PROFILE, guestUser);
     userIndex[guestEmail] = guestId;
@@ -134,16 +148,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const createGuestUser = (id: string, email: string): User => ({
-      id,
-      email,
-      displayName: 'Guest',
-      createdAt: Date.now(),
-      preferences: {
-        streakMinSeconds: 600,
-        streakMinTopics: 1,
-        dailyGoalSeconds: 0,
-        theme: 'dark'
-      }
+    id,
+    email,
+    displayName: 'Guest',
+    createdAt: Date.now(),
+    preferences: {
+      streakMinSeconds: 600,
+      streakMinTopics: 1,
+      dailyGoalSeconds: 0,
+      themeId: DEFAULT_THEME_ID
+    }
   });
 
   const logout = () => {

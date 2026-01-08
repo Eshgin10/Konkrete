@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { APP_THEMES, DEFAULT_THEME_ID } from '../constants';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { User as UserIcon, Flame, ChevronRight, Mail, Minus, Plus, Target, Lock, Eye, EyeOff, PieChart, BarChart3, Settings } from 'lucide-react';
+import { User as UserIcon, Flame, ChevronRight, Mail, Minus, Plus, Target, Lock, Eye, EyeOff, Palette } from 'lucide-react';
 
 const ListItem = ({
     icon: Icon,
@@ -16,7 +17,7 @@ const ListItem = ({
 }: any) => (
     <div
         onClick={onClick}
-        className="flex items-center pl-4 bg-[#1C1C1E] active:bg-[#2C2C2E] transition-colors cursor-pointer min-h-[56px]"
+        className="flex items-center pl-4 bg-surface active:bg-surfaceHighlight transition-colors cursor-pointer min-h-[56px]"
     >
         <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center mr-4 shadow-sm`} style={{ backgroundColor: iconColor }}>
             <Icon size={18} className="text-white stroke-[2.5]" />
@@ -32,7 +33,7 @@ const ListItem = ({
 );
 
 const CounterControl = ({ label, value, onChange, min = 0, unit = '' }: { label: string, value: number, onChange: (val: number) => void, min?: number, unit?: string }) => (
-    <div className="flex items-center justify-between bg-[#2C2C2E] rounded-2xl p-4">
+    <div className="flex items-center justify-between bg-surfaceHighlight rounded-2xl p-4">
         <span className="text-[17px] font-medium text-white">{label}</span>
         <div className="flex items-center gap-4">
             <button
@@ -57,8 +58,8 @@ const CounterControl = ({ label, value, onChange, min = 0, unit = '' }: { label:
 export const Profile = () => {
     const { user, logout, updateProfile } = useAuth();
 
-    // Modes: 'none' | 'details' | 'streak' | 'dailyGoal'
-    const [editMode, setEditMode] = useState<'none' | 'details' | 'streak' | 'dailyGoal'>('none');
+    // Modes: 'none' | 'details' | 'streak' | 'dailyGoal' | 'themes'
+    const [editMode, setEditMode] = useState<'none' | 'details' | 'streak' | 'dailyGoal' | 'themes'>('none');
 
     // Details State
     const [name, setName] = useState(user?.displayName || '');
@@ -106,14 +107,11 @@ export const Profile = () => {
         setEditMode('none');
     };
 
-    const handleToggleFocusView = () => {
-        const currentView = user?.preferences.focusDistributionView || 'pie';
-        const newView = currentView === 'pie' ? 'bar' : 'pie';
-
+    const handleUpdateTheme = (themeId: string) => {
         updateProfile({
             preferences: {
                 ...user?.preferences!,
-                focusDistributionView: newView
+                themeId
             }
         });
     };
@@ -169,13 +167,13 @@ export const Profile = () => {
     };
 
     return (
-        <div className="flex flex-col h-full pb-32 animate-slide-up bg-black">
+        <div className="flex flex-col h-full pb-32 animate-slide-up bg-background">
             <div className="px-1 pt-2 mb-8">
                 <h1 className="font-heading text-4xl font-bold text-white tracking-tight">Profile</h1>
             </div>
 
             <div className="flex items-center space-x-5 mb-10 px-1">
-                <div className="w-[88px] h-[88px] rounded-full bg-[#2C2C2E] flex items-center justify-center text-3xl font-medium text-[#8E8E93] border border-[#38383A] shadow-lg">
+                <div className="w-[88px] h-[88px] rounded-full bg-surfaceHighlight flex items-center justify-center text-3xl font-medium text-[#8E8E93] border border-[#38383A] shadow-lg">
                     {user?.displayName?.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -186,7 +184,7 @@ export const Profile = () => {
 
             {editMode === 'details' && (
                 <div className="px-1 space-y-6 animate-fade-in">
-                    <div className="bg-[#1C1C1E] rounded-2xl p-6 space-y-4">
+                    <div className="bg-surface rounded-2xl p-6 space-y-4">
                         <h3 className="font-heading text-xl font-bold text-white mb-2">Edit Details</h3>
                         <Input label="Display Name" value={name} onChange={(e) => setName(e.target.value)} />
                         <div className="opacity-50 pointer-events-none">
@@ -202,7 +200,7 @@ export const Profile = () => {
 
             {editMode === 'streak' && (
                 <div className="px-1 space-y-6 animate-fade-in">
-                    <div className="bg-[#1C1C1E] rounded-2xl p-6 space-y-4">
+                    <div className="bg-surface rounded-2xl p-6 space-y-4">
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-heading text-xl font-bold text-white">Streak Config</h3>
                             <Flame size={24} className="text-[#FF9F0A] fill-[#FF9F0A]/20" />
@@ -253,7 +251,7 @@ export const Profile = () => {
 
             {editMode === 'dailyGoal' && (
                 <div className="px-1 space-y-6 animate-fade-in">
-                    <div className="bg-[#1C1C1E] rounded-2xl p-6 space-y-4">
+                    <div className="bg-surface rounded-2xl p-6 space-y-4">
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-heading text-xl font-bold text-white">Daily Goal</h3>
                             <Target size={24} className="text-[#30D158]" />
@@ -294,9 +292,47 @@ export const Profile = () => {
                 </div>
             )}
 
+            {editMode === 'themes' && (
+                <div className="px-1 space-y-6 animate-fade-in">
+                    <div className="bg-surface rounded-2xl p-6 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-heading text-xl font-bold text-white">App Theme</h3>
+                            <Palette size={24} className="text-white opacity-80" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {APP_THEMES.map(theme => {
+                                const isActive = (user?.preferences.themeId || DEFAULT_THEME_ID) === theme.id;
+                                return (
+                                    <button
+                                        key={theme.id}
+                                        onClick={() => handleUpdateTheme(theme.id)}
+                                        className={`
+                                            aspect-square rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-200 border-2
+                                            ${isActive ? 'bg-white/10 border-white scale-[1.02]' : 'bg-surfaceHighlight border-transparent hover:bg-[#3A3A3C]'}
+                                        `}
+                                    >
+                                        <div
+                                            className="w-16 h-16 rounded-full shadow-lg"
+                                            style={{ background: `linear-gradient(135deg, ${theme.color}, ${(theme as any).secondary || theme.color})` }}
+                                        />
+                                        <span className={`text-[15px] font-medium ${isActive ? 'text-white' : 'text-[#8E8E93]'}`}>
+                                            {theme.name}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <div className="pt-2">
+                        <Button variant="secondary" onClick={() => setEditMode('none')} fullWidth>Done</Button>
+                    </div>
+                </div>
+            )}
+
             {editMode === 'none' && (
                 <div className="space-y-8 animate-fade-in">
-                    <div className="overflow-hidden rounded-2xl mx-1 bg-[#1C1C1E]">
+                    <div className="overflow-hidden rounded-2xl mx-1 bg-surface">
                         <ListItem
                             icon={UserIcon}
                             iconColor="#007AFF"
@@ -331,7 +367,7 @@ export const Profile = () => {
                         )}
                     </div>
 
-                    <div className="overflow-hidden rounded-2xl mx-1 bg-[#1C1C1E]">
+                    <div className="overflow-hidden rounded-2xl mx-1 bg-surface">
                         <ListItem
                             icon={Flame}
                             iconColor="#FF9F0A"
@@ -349,11 +385,11 @@ export const Profile = () => {
                             isLast={false}
                         />
                         <ListItem
-                            icon={Settings}
-                            iconColor="#8E8E93"
-                            label="Focus Distribution View"
-                            value={user?.preferences.focusDistributionView === 'bar' ? 'Bar Graph' : 'Pie Chart'}
-                            onClick={handleToggleFocusView}
+                            icon={Palette}
+                            iconColor="var(--color-primary)"
+                            label="Themes"
+                            value={(APP_THEMES.find(t => t.id === (user?.preferences.themeId || DEFAULT_THEME_ID))?.name) || 'Ocean'}
+                            onClick={() => setEditMode('themes')}
                             isLast={true}
                         />
                     </div>
@@ -361,7 +397,7 @@ export const Profile = () => {
                     <div className="overflow-hidden rounded-2xl mx-1">
                         <button
                             onClick={logout}
-                            className="w-full bg-[#1C1C1E] active:bg-[#2C2C2E] flex items-center justify-center h-[56px] text-[17px] text-[#FF453A] font-medium transition-colors"
+                            className="w-full bg-surface active:bg-surfaceHighlight flex items-center justify-center h-[56px] text-[17px] text-[#FF453A] font-medium transition-colors"
                         >
                             Sign Out
                         </button>

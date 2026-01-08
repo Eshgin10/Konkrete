@@ -189,10 +189,10 @@ export const Tracking = () => {
         <div className={`
         relative overflow-hidden rounded-2xl p-8 mb-8 text-center transition-all duration-500
         ${activeTopicId
-            ? 'bg-[#1C1C1E] border border-white/10 shadow-2xl'
-            : 'bg-[#1C1C1E]/50 border border-white/5 border-dashed'}
+            ? 'bg-surface border border-white/10 shadow-2xl'
+            : 'bg-surface/50 border border-white/5 border-dashed'}
         ${timerState === 'running'
-            ? 'shadow-[0_0_60px_-20px_rgba(0,122,255,0.4)] border-[#007AFF]/30'
+            ? 'shadow-[0_0_60px_-20px_rgba(0,122,255,0.4)] border-primary/30'
             : ''}
       `}>
           <div className="relative z-10 flex flex-col items-center">
@@ -241,7 +241,7 @@ export const Tracking = () => {
 
                   {/* Stop Button */}
                   {(timerState !== 'idle' || elapsedSeconds > 0) && (
-                    <button onClick={stopTimer} className="w-16 h-16 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#FF453A] border border-[#FF453A]/30 active:scale-95 transition-transform animate-fade-in">
+                    <button onClick={stopTimer} className="w-16 h-16 rounded-full bg-surfaceHighlight flex items-center justify-center text-[#FF453A] border border-[#FF453A]/30 active:scale-95 transition-transform animate-fade-in">
                       <Square fill="currentColor" size={24} />
                     </button>
                   )}
@@ -275,9 +275,9 @@ export const Tracking = () => {
                 }}
                 className={`
                     relative group transition-all duration-300 min-h-[140px] flex flex-col justify-between p-5
-                    ${isActive ? 'ring-[3px] ring-[#007AFF] bg-[#2C2C2E]' : 'bg-[#1C1C1E]'}
+                    ${isActive ? 'ring-[3px] ring-primary bg-surfaceHighlight' : 'bg-surface'}
                     ${timerState !== 'idle' && !isActive ? 'opacity-30 pointer-events-none grayscale' : ''}
-                    ${timerState === 'idle' ? 'hover:bg-[#2C2C2E] cursor-pointer' : ''}
+                    ${timerState === 'idle' ? 'hover:bg-surfaceHighlight cursor-pointer' : ''}
                 `}
               >
                 <div className="flex justify-between items-start mb-2">
@@ -306,7 +306,7 @@ export const Tracking = () => {
 
                 <button
                   onClick={(e) => openEditModal(e, topic.id)}
-                  className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-[#3A3A3C] active:scale-95 transition-all"
+                  className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-surfaceHighlight border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
                   aria-label="Edit topic"
                   type="button"
                 >
@@ -319,10 +319,10 @@ export const Tracking = () => {
           {/* Add Topic Button Card */}
           <div
             onClick={() => setIsAdding(true)}
-            className="min-h-[140px] rounded-2xl border-2 border-dashed border-[#2C2C2E] flex flex-col items-center justify-center cursor-pointer hover:bg-[#2C2C2E]/30 hover:border-[#3A3A3C] active:bg-[#2C2C2E]/50 transition-all active:scale-[0.98] group"
+            className="min-h-[140px] rounded-2xl border-2 border-dashed border-surfaceHighlight flex flex-col items-center justify-center cursor-pointer hover:bg-surfaceHighlight/30 hover:border-[#3A3A3C] active:bg-surfaceHighlight/50 transition-all active:scale-[0.98] group"
           >
-            <div className="w-12 h-12 rounded-full bg-[#2C2C2E] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm group-hover:bg-[#3A3A3C]">
-              <Plus size={24} className="text-[#007AFF]" strokeWidth={3} />
+            <div className="w-12 h-12 rounded-full bg-surfaceHighlight flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm group-hover:bg-white/10">
+              <Plus size={24} className="text-primary" strokeWidth={3} />
             </div>
             <span className="text-[15px] font-medium text-[#8E8E93] group-hover:text-white transition-colors">Create New</span>
           </div>
@@ -330,253 +330,259 @@ export const Tracking = () => {
       </div>
 
       {/* Add Topic Modal */}
-      {isAdding && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-            onClick={() => setIsAdding(false)}
-          />
-          <div className="relative bg-[#1C1C1E] w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-scale-press border border-white/10 p-6 flex flex-col space-y-6">
+      {
+        isAdding && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+              onClick={() => setIsAdding(false)}
+            />
+            <div className="relative bg-surface w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-scale-press border border-white/10 p-6 flex flex-col space-y-6">
 
-            {/* Header */}
-            <div className="text-center">
-              <h3 className="font-heading text-2xl font-bold text-white mb-1">New Topic</h3>
-              <p className="text-[15px] text-textSecondary">What are you focusing on?</p>
+              {/* Header */}
+              <div className="text-center">
+                <h3 className="font-heading text-2xl font-bold text-white mb-1">New Topic</h3>
+                <p className="text-[15px] text-textSecondary">What are you focusing on?</p>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleAddTopic} className="space-y-6">
+                <div className="space-y-4">
+                  {/* Name Input */}
+                  <div className="bg-surfaceHighlight rounded-2xl px-2 py-1">
+                    <input
+                      autoFocus
+                      placeholder="Topic Name (e.g., Coding)"
+                      value={newTopicName}
+                      onChange={(e) => setNewTopicName(e.target.value)}
+                      className="w-full bg-transparent text-white text-[17px] placeholder-[#8E8E93] h-12 px-4 border-none outline-none font-medium text-center"
+                    />
+                  </div>
+
+                  {/* Icon Picker */}
+                  <div>
+                    <label className="text-[13px] text-textSecondary font-medium mb-3 block text-center">Choose Icon</label>
+                    <div className="flex flex-wrap justify-center gap-3">
+                      {TOPIC_ICONS.map(icon => {
+                        const IconComp = ICON_MAP[icon];
+                        const isSelected = selectedIcon === icon;
+                        return (
+                          <button
+                            key={icon}
+                            type="button"
+                            onClick={() => setSelectedIcon(icon)}
+                            className={`
+                                            w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200
+                                            ${isSelected ? 'bg-white text-black scale-110 shadow-lg' : 'bg-surfaceHighlight text-[#8E8E93] hover:bg-[#3A3A3C]'}
+                                        `}
+                          >
+                            <IconComp size={20} strokeWidth={2.5} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-3 pt-2">
+                  <Button
+                    type="submit"
+                    fullWidth
+                    disabled={!newTopicName.trim()}
+                    className="bg-[#007AFF] hover:bg-[#0069D9] text-white shadow-lg shadow-blue-500/20"
+                  >
+                    Create Topic
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsAdding(false)}
+                    fullWidth
+                    className="text-[#FF453A] hover:bg-[#FF453A]/10"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
             </div>
+          </div>
+        )
+      }
 
-            {/* Form */}
-            <form onSubmit={handleAddTopic} className="space-y-6">
+      {/* Delete Confirmation Modal */}
+      {
+        showDeleteModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowDeleteModal(false)} />
+            <div className="relative bg-surface w-full max-w-[320px] rounded-2xl p-6 flex flex-col items-center shadow-2xl animate-scale-press border border-white/10">
+
+              <div className="w-16 h-16 rounded-full bg-[#FF453A]/10 flex items-center justify-center mb-5 text-[#FF453A] ring-1 ring-[#FF453A]/20">
+                <Trash2 size={32} strokeWidth={2} />
+              </div>
+
+              <h3 className="font-heading text-xl font-bold text-white mb-2 text-center">Delete Topic?</h3>
+
+              <p className="text-[15px] text-textSecondary text-center leading-relaxed mb-6 px-2">
+                Are you sure you want to delete <span className="text-white font-semibold">"{topicToDeleteName}"</span>? All session history will be lost.
+              </p>
+
+              {/* Toggle Switch for "Don't ask again" */}
+              <div
+                onClick={() => setDontAskAgain(!dontAskAgain)}
+                className="flex items-center justify-between w-full bg-surfaceHighlight px-4 py-3 rounded-2xl mb-8 cursor-pointer active:scale-[0.99] transition-transform"
+              >
+                <span className="text-[15px] font-medium text-white">Don't ask again</span>
+                <div className={`
+                        w-[51px] h-[31px] rounded-full p-[2px] transition-colors duration-300 relative
+                        ${dontAskAgain ? 'bg-[#34C759]' : 'bg-[#3A3A3C]'}
+                    `}>
+                  <div className={`
+                            w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300 cubic-bezier(0.4, 0.0, 0.2, 1)
+                            ${dontAskAgain ? 'translate-x-[20px]' : 'translate-x-0'}
+                        `} />
+                </div>
+              </div>
+
+              <div className="w-full space-y-3">
+                <Button
+                  onClick={confirmDelete}
+                  variant="danger"
+                  fullWidth
+                  className="shadow-lg shadow-red-500/20"
+                >
+                  Delete Forever
+                </Button>
+                <Button
+                  onClick={() => setShowDeleteModal(false)}
+                  variant="ghost"
+                  fullWidth
+                  className="text-white hover:bg-white/5"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Edit Topic Modal */}
+      {
+        showEditModal && topicToEditId && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+              onClick={closeEditModal}
+            />
+            <div className="relative bg-surface w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-scale-press border border-white/10 p-6 flex flex-col space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-heading text-xl font-bold text-white">Edit Topic</h3>
+                <button onClick={closeEditModal} className="p-2 -mr-2 text-[#8E8E93] hover:text-white transition-colors" type="button">
+                  <X size={20} />
+                </button>
+              </div>
+
               <div className="space-y-4">
-                {/* Name Input */}
-                <div className="bg-[#2C2C2E] rounded-2xl px-2 py-1">
+                <div className="bg-surfaceHighlight rounded-2xl px-2 py-1">
                   <input
-                    autoFocus
-                    placeholder="Topic Name (e.g., Coding)"
-                    value={newTopicName}
-                    onChange={(e) => setNewTopicName(e.target.value)}
-                    className="w-full bg-transparent text-white text-[17px] placeholder-[#8E8E93] h-12 px-4 border-none outline-none font-medium text-center"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-transparent text-white text-[17px] placeholder-[#8E8E93] h-12 px-4 border-none outline-none font-medium"
+                    placeholder="Topic Name"
                   />
                 </div>
 
-                {/* Icon Picker */}
                 <div>
-                  <label className="text-[13px] text-textSecondary font-medium mb-3 block text-center">Choose Icon</label>
-                  <div className="flex flex-wrap justify-center gap-3">
+                  <label className="text-[13px] text-textSecondary font-medium mb-2 block">Icon</label>
+                  <div className="flex flex-wrap gap-2">
                     {TOPIC_ICONS.map(icon => {
                       const IconComp = ICON_MAP[icon];
-                      const isSelected = selectedIcon === icon;
+                      const isSelected = editIcon === icon;
                       return (
                         <button
                           key={icon}
                           type="button"
-                          onClick={() => setSelectedIcon(icon)}
-                          className={`
-                                            w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200
-                                            ${isSelected ? 'bg-white text-black scale-110 shadow-lg' : 'bg-[#2C2C2E] text-[#8E8E93] hover:bg-[#3A3A3C]'}
-                                        `}
+                          onClick={() => setEditIcon(icon)}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isSelected ? 'bg-white text-black scale-110 shadow-lg' : 'bg-surfaceHighlight text-[#8E8E93] hover:bg-[#3A3A3C]'}`}
                         >
-                          <IconComp size={20} strokeWidth={2.5} />
+                          <IconComp size={18} strokeWidth={2.5} />
                         </button>
                       );
                     })}
                   </div>
                 </div>
+
+                <div>
+                  <label className="text-[13px] text-textSecondary font-medium mb-2 block">Color</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TOPIC_COLORS.map(color => {
+                      const isSelected = editColor === color;
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setEditColor(color)}
+                          className={`w-9 h-9 rounded-full border transition-all ${isSelected ? 'ring-2 ring-white/80 border-white/30 scale-110' : 'border-white/10'}`}
+                          style={{ backgroundColor: color }}
+                          aria-label="Select color"
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[13px] text-textSecondary font-medium block">Adjust Time</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Hours */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-textSecondary font-medium text-center">Hours</label>
+                      <input
+                        value={manualHours}
+                        onChange={(e) => setManualHours(e.target.value)}
+                        inputMode="numeric"
+                        className="bg-surfaceHighlight rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      />
+                    </div>
+
+                    {/* Minutes */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-textSecondary font-medium text-center">Minutes</label>
+                      <input
+                        value={manualMinutes}
+                        onChange={(e) => setManualMinutes(e.target.value)}
+                        inputMode="numeric"
+                        className="bg-surfaceHighlight rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      />
+                    </div>
+
+                    {/* Seconds */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-textSecondary font-medium text-center">Seconds</label>
+                      <input
+                        value={manualSeconds}
+                        onChange={(e) => setManualSeconds(e.target.value)}
+                        inputMode="numeric"
+                        className="bg-surfaceHighlight rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Actions */}
-              <div className="space-y-3 pt-2">
-                <Button
-                  type="submit"
-                  fullWidth
-                  disabled={!newTopicName.trim()}
-                  className="bg-[#007AFF] hover:bg-[#0069D9] text-white shadow-lg shadow-blue-500/20"
-                >
-                  Create Topic
+              <div className="pt-2 space-y-3">
+                <Button type="button" fullWidth onClick={saveTopicEdits} disabled={!editName.trim()}>
+                  Save Changes
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setIsAdding(false)}
-                  fullWidth
-                  className="text-[#FF453A] hover:bg-[#FF453A]/10"
-                >
+                <Button type="button" variant="ghost" fullWidth onClick={closeEditModal} className="text-[#8E8E93] hover:text-white">
                   Cancel
                 </Button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowDeleteModal(false)} />
-          <div className="relative bg-[#1C1C1E] w-full max-w-[320px] rounded-2xl p-6 flex flex-col items-center shadow-2xl animate-scale-press border border-white/10">
-
-            <div className="w-16 h-16 rounded-full bg-[#FF453A]/10 flex items-center justify-center mb-5 text-[#FF453A] ring-1 ring-[#FF453A]/20">
-              <Trash2 size={32} strokeWidth={2} />
-            </div>
-
-            <h3 className="font-heading text-xl font-bold text-white mb-2 text-center">Delete Topic?</h3>
-
-            <p className="text-[15px] text-textSecondary text-center leading-relaxed mb-6 px-2">
-              Are you sure you want to delete <span className="text-white font-semibold">"{topicToDeleteName}"</span>? All session history will be lost.
-            </p>
-
-            {/* Toggle Switch for "Don't ask again" */}
-            <div
-              onClick={() => setDontAskAgain(!dontAskAgain)}
-              className="flex items-center justify-between w-full bg-[#2C2C2E] px-4 py-3 rounded-2xl mb-8 cursor-pointer active:scale-[0.99] transition-transform"
-            >
-              <span className="text-[15px] font-medium text-white">Don't ask again</span>
-              <div className={`
-                        w-[51px] h-[31px] rounded-full p-[2px] transition-colors duration-300 relative
-                        ${dontAskAgain ? 'bg-[#34C759]' : 'bg-[#3A3A3C]'}
-                    `}>
-                <div className={`
-                            w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300 cubic-bezier(0.4, 0.0, 0.2, 1)
-                            ${dontAskAgain ? 'translate-x-[20px]' : 'translate-x-0'}
-                        `} />
-              </div>
-            </div>
-
-            <div className="w-full space-y-3">
-              <Button
-                onClick={confirmDelete}
-                variant="danger"
-                fullWidth
-                className="shadow-lg shadow-red-500/20"
-              >
-                Delete Forever
-              </Button>
-              <Button
-                onClick={() => setShowDeleteModal(false)}
-                variant="ghost"
-                fullWidth
-                className="text-white hover:bg-white/5"
-              >
-                Cancel
-              </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Edit Topic Modal */}
-      {showEditModal && topicToEditId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-            onClick={closeEditModal}
-          />
-          <div className="relative bg-[#1C1C1E] w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-scale-press border border-white/10 p-6 flex flex-col space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="font-heading text-xl font-bold text-white">Edit Topic</h3>
-              <button onClick={closeEditModal} className="p-2 -mr-2 text-[#8E8E93] hover:text-white transition-colors" type="button">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-[#2C2C2E] rounded-2xl px-2 py-1">
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-transparent text-white text-[17px] placeholder-[#8E8E93] h-12 px-4 border-none outline-none font-medium"
-                  placeholder="Topic Name"
-                />
-              </div>
-
-              <div>
-                <label className="text-[13px] text-textSecondary font-medium mb-2 block">Icon</label>
-                <div className="flex flex-wrap gap-2">
-                  {TOPIC_ICONS.map(icon => {
-                    const IconComp = ICON_MAP[icon];
-                    const isSelected = editIcon === icon;
-                    return (
-                      <button
-                        key={icon}
-                        type="button"
-                        onClick={() => setEditIcon(icon)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isSelected ? 'bg-white text-black scale-110 shadow-lg' : 'bg-[#2C2C2E] text-[#8E8E93] hover:bg-[#3A3A3C]'}`}
-                      >
-                        <IconComp size={18} strokeWidth={2.5} />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[13px] text-textSecondary font-medium mb-2 block">Color</label>
-                <div className="flex flex-wrap gap-2">
-                  {TOPIC_COLORS.map(color => {
-                    const isSelected = editColor === color;
-                    return (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setEditColor(color)}
-                        className={`w-9 h-9 rounded-full border transition-all ${isSelected ? 'ring-2 ring-white/80 border-white/30 scale-110' : 'border-white/10'}`}
-                        style={{ backgroundColor: color }}
-                        aria-label="Select color"
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[13px] text-textSecondary font-medium block">Adjust Time</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Hours */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-textSecondary font-medium text-center">Hours</label>
-                    <input
-                      value={manualHours}
-                      onChange={(e) => setManualHours(e.target.value)}
-                      inputMode="numeric"
-                      className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
-                  </div>
-
-                  {/* Minutes */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-textSecondary font-medium text-center">Minutes</label>
-                    <input
-                      value={manualMinutes}
-                      onChange={(e) => setManualMinutes(e.target.value)}
-                      inputMode="numeric"
-                      className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
-                  </div>
-
-                  {/* Seconds */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] text-textSecondary font-medium text-center">Seconds</label>
-                    <input
-                      value={manualSeconds}
-                      onChange={(e) => setManualSeconds(e.target.value)}
-                      inputMode="numeric"
-                      className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 space-y-3">
-              <Button type="button" fullWidth onClick={saveTopicEdits} disabled={!editName.trim()}>
-                Save Changes
-              </Button>
-              <Button type="button" variant="ghost" fullWidth onClick={closeEditModal} className="text-[#8E8E93] hover:text-white">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      }
     </>
   );
 };

@@ -55,3 +55,62 @@ export const STORAGE_KEYS = {
 };
 
 export const DEFAULT_DAILY_GOAL = 60; // Minutes
+
+export const APP_THEMES = [
+  {
+    id: 'blue',
+    name: 'Default',
+    color: '#007AFF', // Blue
+    secondary: '#FFFFFF', // White for Premium/Minimalist feel
+    background: '#000000',
+    surface: '#1C1C1E',
+    surfaceHighlight: '#2C2C2E'
+  },
+  {
+    id: 'green',
+    name: 'Forest',
+    color: '#30D158', // Green
+    secondary: '#FFD60A', // Sunlight Yellow
+    background: '#050A05',
+    surface: '#121A12',
+    surfaceHighlight: '#1E281E'
+  },
+  {
+    id: 'orange',
+    name: 'Sunset',
+    color: '#FF9F0A', // Orange
+    secondary: '#BF5AF2', // Purple
+    background: '#100515', // Deep Purple/Black
+    surface: '#1F1525',
+    surfaceHighlight: '#2D2036'
+  },
+  {
+    id: 'red',
+    name: 'Ember',
+    color: '#FF453A', // Red
+    secondary: '#FF9F0A', // Orange
+    background: '#0F0505',
+    surface: '#1F1010',
+    surfaceHighlight: '#2C1E1E'
+  },
+  {
+    id: 'purple',
+    name: 'Cosmos',
+    color: '#BF5AF2', // Purple
+    secondary: '#64D2FF', // Cyan
+    background: '#0B0515',
+    surface: '#161022',
+    surfaceHighlight: '#201A2C'
+  },
+  {
+    id: 'teal',
+    name: 'Aqua',
+    color: '#64D2FF', // Teal
+    secondary: '#007AFF', // Blue
+    background: '#000810',
+    surface: '#0A1520',
+    surfaceHighlight: '#152230'
+  },
+];
+
+export const DEFAULT_THEME_ID = 'blue';

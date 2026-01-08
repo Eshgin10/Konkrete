@@ -34,7 +34,23 @@ const calculateStreak = (sessions: Session[], user: User | null) => {
 
     const normalizedStart = Math.min(startTime, endTime);
     const normalizedEnd = Math.max(startTime, endTime);
-    if (normalizedEnd <= normalizedStart) continue;
+
+    // Handle point-in-time adjustments (e.g. negative manual time)
+    if (normalizedStart === normalizedEnd) {
+      if (s.durationSeconds !== 0) {
+        const dayStart = getDayStart(new Date(normalizedStart));
+        const prev = dailyTotals.get(dayStart) || { seconds: 0, topics: new Set<string>() };
+        prev.seconds += s.durationSeconds;
+        // Only count as an active topic if contributing positive time
+        if (s.durationSeconds > 0) {
+          prev.topics.add(topicId);
+        }
+        dailyTotals.set(dayStart, prev);
+      }
+      continue;
+    }
+
+    if (normalizedEnd < normalizedStart) continue;
 
     let cursor = getDayStart(new Date(normalizedStart));
     const lastDayStart = getDayStart(new Date(normalizedEnd));
@@ -226,6 +242,21 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
 
       const normalizedStart = Math.min(startTime, endTime);
       const normalizedEnd = Math.max(startTime, endTime);
+
+      // Handle point-in-time adjustments
+      if (normalizedStart === normalizedEnd && s.durationSeconds !== 0) {
+        if (normalizedStart >= focusRange.startMs && normalizedStart <= focusRange.endMs) {
+          const meta = topicMeta.get(topicId);
+          const name = meta?.name || s.topicName || 'Unknown';
+          const color = meta?.color || '#2C2C2E';
+
+          const prev = byTopic.get(topicId) || { name, color, seconds: 0 };
+          prev.seconds += s.durationSeconds;
+          byTopic.set(topicId, prev);
+        }
+        continue;
+      }
+
       if (normalizedEnd <= focusRange.startMs || normalizedStart >= focusRange.endMs) continue;
 
       const overlapStart = Math.max(normalizedStart, focusRange.startMs);
@@ -377,7 +408,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
       </div>
 
       {/* Streak Card */}
-      <Card className="relative overflow-hidden border border-white/5 shadow-2xl shadow-black/50 bg-gradient-to-br from-[#323234] to-[#18181a]">
+      <Card className="relative overflow-hidden border border-white/5 shadow-2xl shadow-black/50 bg-gradient-to-br from-primary/10 via-surface to-secondary/10">
         <div className="relative z-10 flex flex-row items-center justify-between px-2">
           <div>
             <div className="text-[13px] font-bold text-white/80 mb-2">Current Streak</div>
@@ -386,29 +417,41 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             </div>
           </div>
           <div className="flex items-center justify-center">
-            <Flame size={64} className="text-white fill-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]" />
+            <Flame size={64} className="text-secondary fill-secondary drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]" />
           </div>
         </div>
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-secondary/20 rounded-full blur-3xl"></div>
       </Card>
 
 
       {/* Objective Card */}
       <Card className="shadow-sm">
-        <div className="flex items-center justify-between mb-4 px-2">
-          <div className="flex items-center gap-2">
-            <Target size={20} className="text-primary" />
-            <h3 className="font-heading font-bold text-xl text-white tracking-tight text-left">Weekly Objectives</h3>
+        <div className="flex items-center justify-between mb-5 px-1 sm:px-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+              <Target size={18} className="text-secondary" />
+            </div>
+            <div>
+              <h3 className="font-heading font-bold text-[17px] text-white tracking-tight leading-none mb-0.5">Weekly Objectives</h3>
+              <p className="text-[11px] text-textSecondary font-medium">Clear your targets</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-[#2C2C2E] rounded-lg p-1">
-            <button onClick={() => setObjectiveWeekOffset(p => p - 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
-              <ChevronLeft size={16} />
+
+          <div className="flex items-center gap-1 bg-surfaceHighlight/80 backdrop-blur-md rounded-md p-0.5 border border-white/5">
+            <button
+              onClick={() => setObjectiveWeekOffset(p => p - 1)}
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-textSecondary hover:text-white transition-all active:scale-95"
+            >
+              <ChevronLeft size={14} />
             </button>
-            <span className="text-[12px] font-semibold tabular-nums text-white min-w-[50px] text-center">
-              Week {currentObjectiveWeek.week}
+            <span className="text-[11px] font-bold tabular-nums text-white px-2 min-w-[40px] text-center">
+              W{currentObjectiveWeek.week}
             </span>
-            <button onClick={() => setObjectiveWeekOffset(p => p + 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
-              <ChevronRight size={16} />
+            <button
+              onClick={() => setObjectiveWeekOffset(p => p + 1)}
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-textSecondary hover:text-white transition-all active:scale-95"
+            >
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -419,7 +462,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
               {weekObjectives.map(obj => (
                 <div key={obj.id} className={`group flex items-center justify-between p-3 rounded-xl border transition-all ${obj.completed
                   ? 'bg-green-500/20 border-green-500/30'
-                  : 'bg-[#2C2C2E]/50 border-white/5 hover:border-white/10'
+                  : 'bg-surfaceHighlight/50 border-white/5 hover:border-white/10'
                   }`}>
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <button
@@ -453,15 +496,15 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => startEditing(obj.id, obj.text)}
-                      className="p-2 text-textSecondary hover:text-white transition-all"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-textSecondary hover:text-white hover:bg-white/10 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     >
-                      <Pencil size={16} />
+                      <Pencil size={14} />
                     </button>
                     <button
                       onClick={() => deleteObjective(obj.id)}
-                      className="p-2 text-textSecondary hover:text-[#FF453A] transition-all"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-textSecondary hover:text-[#FF453A] hover:bg-[#FF453A]/10 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
@@ -501,7 +544,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Calendar Header */}
-        <div className="flex items-center justify-between bg-[#2C2C2E]/50 rounded-t-xl p-3 border-b border-white/5">
+        <div className="flex items-center justify-between bg-surfaceHighlight/50 rounded-t-xl p-3 border-b border-white/5">
           <button onClick={() => setGymMonthOffset(p => p - 1)} className="p-1 text-textSecondary hover:text-white transition-colors">
             <ChevronLeft size={16} />
           </button>
@@ -512,7 +555,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Calendar Grid */}
-        <div className="bg-[#1C1C1E] border border-white/5 border-t-0 rounded-b-xl p-4">
+        <div className="bg-surface border border-white/5 border-t-0 rounded-b-xl p-4">
           {/* Weekday Labels */}
           <div className="grid grid-cols-7 mb-2 text-center">
             {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
@@ -535,7 +578,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                         w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-medium cursor-pointer transition-all duration-200 select-none
                         ${isChecked
                       ? 'bg-primary text-white shadow-[0_0_10px_rgba(0,122,255,0.4)] scale-105'
-                      : 'bg-[#2C2C2E] text-[#8E8E93] hover:bg-[#3A3A3C] hover:text-white'
+                      : 'bg-surfaceHighlight text-[#8E8E93] hover:bg-[#3A3A3C] hover:text-white'
                     }
                         ${isToday && !isChecked ? 'ring-1 ring-primary text-primary' : ''}
                      `}
@@ -555,7 +598,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
           <div className="relative z-20">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-1.5 bg-surfaceHighlight text-white text-[11px] font-semibold rounded-lg h-7 px-2.5 outline-none border border-[#3A3A3C]/50 cursor-pointer hover:border-[#3A3A3C] hover:bg-[#323234] transition-all duration-200"
+              className="flex items-center gap-1.5 bg-surfaceHighlight text-white text-[11px] font-semibold rounded-lg h-7 px-2.5 outline-none border border-[#3A3A3C]/50 cursor-pointer hover:border-[#3A3A3C] hover:bg-surfaceHighlight/80 transition-all duration-200"
             >
               <span>
                 {focusPeriod === 'today' && 'Today'}
@@ -571,7 +614,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
             {isDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#1C1C1E]/95 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-xl shadow-2xl py-1 z-20 overflow-hidden ring-1 ring-black/5">
+                <div className="absolute right-0 top-full mt-1.5 w-32 bg-surface/95 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-xl shadow-2xl py-1 z-20 overflow-hidden ring-1 ring-black/5">
                   {[
                     { id: 'today', label: 'Today' },
                     { id: 'this_week', label: 'This Week' },
@@ -588,7 +631,7 @@ export const Overview: React.FC<OverviewProps> = ({ onNavigate }) => {
                       }}
                       className={`w-full text-left px-3 py-2 text-[12px] font-medium transition-colors ${focusPeriod === option.id
                         ? 'text-primary bg-primary/10'
-                        : 'text-gray-200 hover:bg-[#323234]'
+                        : 'text-gray-200 hover:bg-surfaceHighlight'
                         }`}
                     >
                       {option.label}
