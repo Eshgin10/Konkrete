@@ -538,7 +538,6 @@ export const Tracking = () => {
                       onChange={(e) => setManualHours(e.target.value)}
                       inputMode="numeric"
                       className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                      placeholder="0"
                     />
                   </div>
 
@@ -550,7 +549,6 @@ export const Tracking = () => {
                       onChange={(e) => setManualMinutes(e.target.value)}
                       inputMode="numeric"
                       className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                      placeholder="0"
                     />
                   </div>
 
@@ -562,7 +560,6 @@ export const Tracking = () => {
                       onChange={(e) => setManualSeconds(e.target.value)}
                       inputMode="numeric"
                       className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                      placeholder="0"
                     />
                   </div>
                 </div>
