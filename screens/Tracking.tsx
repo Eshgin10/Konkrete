@@ -59,7 +59,9 @@ export const Tracking = () => {
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('zap');
   const [editColor, setEditColor] = useState(TOPIC_COLORS[0]);
-  const [manualMinutesToAdd, setManualMinutesToAdd] = useState('');
+  const [manualHours, setManualHours] = useState('');
+  const [manualMinutes, setManualMinutes] = useState('');
+  const [manualSeconds, setManualSeconds] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -95,14 +97,25 @@ export const Tracking = () => {
     setEditName(topic.name);
     setEditIcon(topic.icon || 'zap');
     setEditColor(topic.color);
-    setManualMinutesToAdd('');
+
+    // Calculate current hours, minutes, seconds from totalMinutes
+    const totalSeconds = Math.floor(topic.totalMinutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    setManualHours(hours.toString());
+    setManualMinutes(minutes.toString());
+    setManualSeconds(seconds.toString());
     setShowEditModal(true);
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setTopicToEditId(null);
-    setManualMinutesToAdd('');
+    setManualHours('');
+    setManualMinutes('');
+    setManualSeconds('');
   };
 
   const saveTopicEdits = () => {
@@ -111,9 +124,22 @@ export const Tracking = () => {
     if (!name) return;
     updateTopic(topicToEditId, { name, icon: editIcon, color: editColor });
 
-    const minutes = Number(manualMinutesToAdd);
-    if (Number.isFinite(minutes) && minutes > 0) {
-      addManualMinutes(topicToEditId, minutes);
+    // Get the topic to find current total time
+    const topic = topics.find(t => t.id === topicToEditId);
+    if (!topic) return;
+
+    // Calculate new total time from inputs
+    const newHours = parseInt(manualHours) || 0;
+    const newMinutes = parseInt(manualMinutes) || 0;
+    const newSeconds = parseInt(manualSeconds) || 0;
+    const newTotalMinutes = (newHours * 60) + newMinutes + (newSeconds / 60);
+
+    // Calculate difference
+    const minutesDifference = newTotalMinutes - topic.totalMinutes;
+
+    // Apply the difference if it's not zero
+    if (minutesDifference !== 0) {
+      addManualMinutes(topicToEditId, minutesDifference);
     }
 
     closeEditModal();
@@ -502,15 +528,43 @@ export const Tracking = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[13px] text-textSecondary font-medium block">Add Minutes</label>
-                <div className="flex flex-col gap-2">
-                  <input
-                    value={manualMinutesToAdd}
-                    onChange={(e) => setManualMinutesToAdd(e.target.value)}
-                    inputMode="numeric"
-                    className="flex-1 bg-[#2C2C2E] rounded-2xl h-14 px-4 text-white outline-none"
-                    placeholder="e.g. 30"
-                  />
+                <label className="text-[13px] text-textSecondary font-medium block">Adjust Time</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Hours */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-textSecondary font-medium text-center">Hours</label>
+                    <input
+                      value={manualHours}
+                      onChange={(e) => setManualHours(e.target.value)}
+                      inputMode="numeric"
+                      className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  {/* Minutes */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-textSecondary font-medium text-center">Minutes</label>
+                    <input
+                      value={manualMinutes}
+                      onChange={(e) => setManualMinutes(e.target.value)}
+                      inputMode="numeric"
+                      className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  {/* Seconds */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] text-textSecondary font-medium text-center">Seconds</label>
+                    <input
+                      value={manualSeconds}
+                      onChange={(e) => setManualSeconds(e.target.value)}
+                      inputMode="numeric"
+                      className="bg-[#2C2C2E] rounded-xl h-14 px-3 text-white text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

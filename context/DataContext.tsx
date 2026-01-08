@@ -80,7 +80,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addManualMinutes = (id: string, minutesToAdd: number) => {
     if (!user) return;
-    if (!Number.isFinite(minutesToAdd) || minutesToAdd <= 0) return;
+    if (!Number.isFinite(minutesToAdd) || minutesToAdd === 0) return;
 
     const topic = topics.find(t => t.id === id);
     if (!topic) return;
@@ -105,7 +105,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     setTopics(prev => {
-      const next = prev.map(t => (t.id === id ? { ...t, totalMinutes: t.totalMinutes + minutesToAdd } : t));
+      const next = prev.map(t => (t.id === id ? { ...t, totalMinutes: Math.max(0, t.totalMinutes + minutesToAdd) } : t));
       storage.setForUser(user.id, STORAGE_KEYS.TOPICS, next);
       return next;
     });
